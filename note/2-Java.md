@@ -732,9 +732,18 @@ Servlet中的过滤器Filter是实现了javax.servlet.Filter接口的服务器�
 
 #### 1. 服务注册与发现
 
+| 组件名    | 语言 | CAP                           | 对外暴露接口 |
+| --------- | ---- | ----------------------------- | ------------ |
+| Zookeeper | Java | CP                            | 客户端       |
+| Eureka    | Java | AP (自我保护机制，保证高可用) | HTTP         |
+| Consul    | Go   | CP                            | HTTP/DNS     |
+| Nacos     | Java | 支持 AP/CP 切换               | HTTP         |
+
 ##### 1.1 ZooKeeper
 
+临时节点：与客户端会话绑定，一旦会话失效，这个客户端所创建的所有临时节点都会被移除；
 
+zookeeper 提供了分布式数据的发布/订阅功能，允许客户端向服务端注册一个 watcher 监听节点变更
 
 ##### 1.2 Eureka
 
