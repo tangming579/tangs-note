@@ -122,7 +122,7 @@ RejectedExecutionHandler（饱和策略）
 
 ### volatile
 
-volatile值有可见性和禁止指令重拍（有序性），无法保证原子性
+volatile值有可见性和禁止指令重排（有序性），无法保证原子性
 
 **工作内存与主内存**
 
@@ -407,6 +407,7 @@ Map集合的主要实现类：
 - 往hashmap里面放键值对的时候先得到key的hashcode，然后重新计算hashcode，（让1分布均匀因为如果分布不均匀，低位全是0，则后来计算数组下标的时候会冲突），然后与length-1按位与，计算数组出数组下标
 - 如果该下标对应的链表为空，则直接把键值对作为链表头结点，如果不为空，则遍历链表看是否有key值相同的，有就把value替换，没有就把该对象最为链表的第一个节点，原有的节点最为他的后续节点
 - 初始容量16，达到阀值扩容，阀值等于最大容量*负载因子，扩容每次2倍，总是2的n次方
+- 链表长度超过8时转为红黑树，当删除小于6时重新变为链表
 
 **并发问题**
 
@@ -422,7 +423,7 @@ ConcurrentHashMap是线程安全的，用来替代HashTable。
 
 **JDK1.8**
 
-JDK1.8的实现已经摒弃了Segment的概念，而是直接用Node数组+链表+红黑树的数据结构来实现，并发控制使用Synchronized和CAS来操作。
+JDK1.8的实现已经摒弃了Segment的概念，而是直接用Node数组+链表或红黑树（的数据结构来实现，并发控制使用Synchronized和CAS来操作。
 
 JDK1.8的Node节点中value和next都用volatile修饰，保证并发的可见性。
 
@@ -762,11 +763,28 @@ zookeeper 提供了分布式数据的发布/订阅功能，允许客户端向服
 
 #### 3.客户端负载均衡
 
-|      | Ribbon | LoadBalance |
-| ---- | ------ | ----------- |
-|      |        |             |
-|      |        |             |
-|      |        |             |
+IRule接口是所有负载均衡策略的父接口，里面核心是choose方法，用来选择一个服务实例
+
+AbstractLoadBalancerRule
+
+使用LoadBalancer替换Ribbon
+
+```xml
+ <dependency>
+     <groupId>com.alibaba.cloud</groupId>
+     <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
+     <exclusions>
+          <exclusion>
+              <groupId>org.springframework.cloud</groupId>
+              <artifactId>spring-cloud-starter-netflix-ribbon</artifactId>
+          </exclusion>
+      </exclusions>
+</dependency>
+<dependency>
+     <groupId>org.springframework.cloud</groupId>
+     <artifactId>spring-cloud-starter-loadbalancer</artifactId>
+</dependency>
+```
 
 
 
