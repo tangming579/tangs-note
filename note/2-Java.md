@@ -802,9 +802,48 @@ AbstractLoadBalancerRule
 
 #### 5.API网关
 
+
+
 #### 6.分布式事务一致性
 
+
+
 #### 7.分布式链路跟踪
+
+##### SkyWalking
+
+为了解决不同的分布式追踪系统 API 不兼容的问题，诞生了 OpenTracing 规范
+
+调用链标准 OpenTracing 的数据模型，主要有以下三个
+
+- **Trace**：一个完整请求链路
+- **Span**：一次调用过程(需要有开始时间和结束时间)
+- **SpanContext**：Trace 的全局上下文信息, 如里面有traceId
+
+skywalking以下主要问题解决方案：
+
+1. 怎么**自动**采集 span 数据：自动采集，对业务代码无侵入：使用插件化+Agent形式实现自动采集
+2. 如何跨进程传递 context：放到 Http 和 gRPC 中的Header中，不影响业务
+3. traceId 如何保证全局唯一：SnowFlake算法（雪花算法）
+4. 请求量这么多采集会不会影响性能
+   - SkyWalking 默认设置了 3 秒采样 3 次，其余请求不采样
+   - 如果上游有携带 Context 过来(说明上游采样了)，则下游**强制**采集数据。这样可以保证链路完整。
+
+**.Net core探针原理**
+
+DiagnosticSource 实现了一个消息的生产者消费者模型，在某个地方触发消息，然后可以在任意地方接收。微软在很多官方库里都预留了性能打点，例如：HttpContext、HttpClient、SqlClient、EntityFrameworkCore等，还有gRPC、CAP、SmartSql等一些第三方库等也都提前留了打点。它们在开始做某件事、做完某件事、做错某件事的时候，都会对进程内触发一个消息，让我们可以通过 DiagnosticSource 消费到这个消息，然后就可以用它来记录某次事件的具体历史了，便是实现了tracing。
+
+**Java探针原理**
+
+a. JVM启动，读取到javaagent参数，初始化其指定的Jar包，调用其的Agent_OnLoad函数。
+
+b. 在Agent_OnLoad函数中，会通过获取JVM实例，调用RegisterEvent初始化注册JVMTI的事件回调函数，获取ClassFileLoadHook。
+
+c. 同时Agent_OnLoad函数中创建完成的sun.instrument.InstrumentationImpl中调用loadClassAndCallPremain，去初始化Premain-Class指定类的premain方法。
+
+d. 执行Jar包中的premain函数，通过Instrumentation向JVM注册Agent的`ClassFileTransform`实例，这一步很关键。
+
+e. Agent初始化完毕后，JVM调用main函数。JVM运行过程中在ClassLoader加载class文件之前，JVM每次都会（注意是每次，这就使得其具备了在运行时修改类方法体的能力）调用ClassFileLoadHook回调，该回调会调用ClassFileTransformer的transform函数，生成字节码。由于是在解析class之前，以二进制流的形式，对后续解析无影响。
 
 ## 6. IO
 
