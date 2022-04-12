@@ -852,15 +852,19 @@ DiagnosticSource 实现了一个消息的生产者消费者模型，在某个地
 
 **Java探针原理**
 
-a. JVM启动，读取到javaagent参数，初始化其指定的Jar包，调用其的Agent_OnLoad函数。
+Java探针使用了 Instrumentation与字节码生成框架Byte Buddy
 
-b. 在Agent_OnLoad函数中，会通过获取JVM实例，调用RegisterEvent初始化注册JVMTI的事件回调函数，获取ClassFileLoadHook。
+Java Agent 本身就是 java 命令的一个参数（即 -javaagent）。-javaagent 参数之后需要指定一个 jar 包，这个 jar 包需要同时满足下面两个条件：
 
-c. 同时Agent_OnLoad函数中创建完成的sun.instrument.InstrumentationImpl中调用loadClassAndCallPremain，去初始化Premain-Class指定类的premain方法。
+1. 在 META-INF 目录下的 MANIFEST.MF 文件中必须指定 premain-class 配置项。
+2. premain-class 配置项指定的类必须提供了 premain() 方法。在 Java 虚拟机启动时，执行 main() 函数之前，虚拟机会先找到 -javaagent 命令指定 jar 包，然后执行premain-class 中的 premain() 方法。
 
-d. 执行Jar包中的premain函数，通过Instrumentation向JVM注册Agent的`ClassFileTransform`实例，这一步很关键。
+使用 Java Agent 的步骤大致如下：
 
-e. Agent初始化完毕后，JVM调用main函数。JVM运行过程中在ClassLoader加载class文件之前，JVM每次都会（注意是每次，这就使得其具备了在运行时修改类方法体的能力）调用ClassFileLoadHook回调，该回调会调用ClassFileTransformer的transform函数，生成字节码。由于是在解析class之前，以二进制流的形式，对后续解析无影响。
+1. 定义一个 MANIFEST.MF 文件，在其中添加 premain-class 配置项。
+2. 创建 premain-class 配置项指定的类，并在其中实现 premain() 方法
+3. 将 MANIFEST.MF 文件和 premain-class 指定的类一起打包成一个 jar 包
+4. 用 -javaagent 指定该 jar 包的路径即可执行其中的 premain() 方法
 
 ## 6. IO
 
