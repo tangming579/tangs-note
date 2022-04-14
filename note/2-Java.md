@@ -553,12 +553,60 @@ https://www.cnblogs.com/aspirant/p/7200523.html
   - 上面Minor GC时介绍中Survivor空间不足时，判断是否允许担保失败，如果不允许则进行Full GC。如果允许，并且每次晋升到老年代的对象平均大小>老年代最大可用连续内存空间，也会进行Full GC。
   - MinorGC后存活的对象超过了老年代剩余空间
   - 方法区内存不足时
-  - System.gc()，可用通过-XX:+ DisableExplicitGC来禁止调用System.g
+  - System.gc()，可用通过-XX:+ DisableExplicitGC来禁止手动调用System.gc()方法
   - CMS GC异常，CMS运行期间预留的内存无法满足程序需要，就会出现一次“Concurrent Mode Failure”失败，会触发Full GC
 
 ### JVM调优
 
-4. 
+#### GC 类型
+
+1. **Serial GC**
+
+   Serial体现在工作是单线程的，精简，但是垃圾收集时会进入"stop-the-world"状态。是JDK8中client模式下默认GC。新生代的Serial GC采用复制算法，老年代的Serial GC采用标记-整理算法，由于区别算法不同，老年代的Serial GC专称Serial Old。
+
+2. **ParNew GC**
+
+   Serial GC的多线程版本，一般用于新生代，配合老年代的CMS GC使用，CMS GC也是并发的。
+
+3. **Parrallel GC**
+
+   也是Serial GC的多线程版本，是JDK8中server模式下的默认GC，吞吐量优先。
+
+4. **CMS GC**
+
+   并发GC，减少停顿时间，但是会占用更多CPU资源和用户争抢线程，基于标记-清除算法，可能产生内存碎片化问题，因此长时间后会触发full GC，而full GC停顿时间是很长的。
+
+5. **G1 GC**
+
+   兼顾吞吐量和停顿时间，JDK9以后的默认GC。G1仍然有年代概念，但是维护成了一个个region，即新生代的eden、from以及to区域，包括老年代都是一个个region。通过remembered set维护region之间的关系，虽然开销比较大，但是好处也多。region之间采用的是复制算法，但其实可以看成标记-整理算法，可以避免内存碎片化。G1还有一个Humongous的概念，Humongous也是一个region，属于老年代，超大对象直接放入老年代就是直接放进Humongous中，有时候Humongous占用了不止一个region。
+
+#### GC 日志
+
+IDEA中配置GC日志：将参数值设置到VM options中即可
+
+Docker中配置GC日志：修改 dockerfile 中执行启动命令设置Jvm参数
+
+```shell
+对应的参数列表
+java -jar
+-XX:MetaspaceSize=128m （元空间默认大小）
+-XX:MaxMetaspaceSize=128m （元空间最大大小）
+-XX:+PrintGC 　　输出GC日志
+-XX:+PrintGCDetails 输出GC的详细日志
+-XX:+PrintGCTimeStamps 输出GC的时间戳（以基准时间的形式）
+-XX:+PrintGCDateStamps 输出GC的时间戳（以日期的形式，如 2013-05-04T21:53:59.234+0800）
+-XX:+PrintHeapAtGC 　　在进行GC的前后打印出堆的信息
+-Xloggc:../logs/gc.log 日志文件的输出路径
+-Xms1024m （堆最大大小）
+-Xmx1024m （堆默认大小）
+-Xmn256m （新生代大小）
+-Xss256k （棧最大深度大小）
+-XX:SurvivorRatio=8 （新生代分区比例 8:2）
+-XX:+UseConcMarkSweepGC （指定使用的垃圾收集器，这里使用CMS收集器）
+app.jar
+```
+
+
 
 ## 4. IO
 
