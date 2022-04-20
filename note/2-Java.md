@@ -705,9 +705,19 @@ ${} 则只是简单的字符串替换；#{} 在预处理时，会把参数部分
 
 **通常一个Xml映射文件，都会写一个Dao接口与之对应，请问，这个Dao接口的工作原理是什么？Dao接口里的方法，参数不同时，方法能重载吗？**
 
-Dao接口里的方法，是不能重载的，因为是全限名+方法名的保存和寻找策略。
+- Dao接口就是**Mapper**接口。
 
-Dao接口的工作原理是JDK动态代理，Mybatis运行时会使用JDK动态代理为Dao接口生成代理proxy对象，代理对象proxy会拦截接口方法，转而执行MappedStatement所代表的sql，然后将sql执行结果返回。
+- 接口的**全限名**就是映射文件中的**namespace**的值
+
+- 接口的方法名就是映射文件中的**MappedStatement**的**id**值
+
+- 接口方法内的参数，就是传递给sql的参数。
+
+- Mapper接口是没有实现类的，当调用接口方法时，**接口全限名+方法名拼接字符串作为key值**，可**唯一定位**一个**MappedStatement**。
+
+  Dao接口里的方法，是不能重载的，因为是全限名+方法名的保存和寻找策略。Dao接口的工作原理是JDK动态代理，MyBatis运行时会使用JDK动态代理为Dao接口生产代理proxy对象，代理对象会拦截接口方法，转而执行MappedStatement所代表的sql，然后将sql执行结果返回。
+
+  在MyBatis中，每一个< select >、< insert >、< update >、< delete >标签，都会被解析成一个MappedStatement对象。
 
 ## 6. 其他
 
