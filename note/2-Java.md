@@ -733,7 +733,18 @@ ${} 则只是简单的字符串替换；#{} 在预处理时，会把参数部分
 - 为了线程安全(字符串自己便是线程安全的)
 - String的不可变性为Java的类加载机制的安全性提供了根本的保障
 
-为什么decimal精度高
+**为什么decimal精度高**
+
+BigDecimal能更精确表示带小数点的数值，因为采用了long intCompact和int scale来表示数值，而不是浮点型的科学计数法
+
+**lambda**
+
+lambda 表达式常用方法：sort() filter() map() flatmap() collection() collectionAndThen() collect() orElse() 
+
+map 与 flatmap：
+
+- map: 对于Stream中包含的元素使用给定的转换函数进行转换操作，新生成的Stream只包含转换生成的元素
+- flatMap：和map类似，不同的是其每个元素转换得到的是Stream对象，会把子Stream中的元素压缩到父集合中
 
 ### 反射
 
