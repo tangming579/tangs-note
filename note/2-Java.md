@@ -337,6 +337,20 @@ public static Session getSession() throws InfrastructureException {
 }  
 ```
 
+### Atomic
+
+- 本质：自旋锁 + CAS
+
+- 优缺点：参考 CAS
+
+- Java 8 的改进：
+
+  LongAdder、LongAccumulator、DoubleAdder、DoubleAccumulator
+
+  实现原理是：使用**分段CAS**以及**自动分段迁移**的方式来大幅度提升多线程高并发执行CAS操作的性能
+
+- 是否可以完全替代？`AtomicLong`提供了很多cas方法，例如`getAndIncrement`、`getAndDecrement`等，使用起来非常的灵活，而`LongAdder`只有`add`和`sum`，使用起来比较受限。如果我们的场景仅仅是需要用到加和减操作的话，那么可以直接使用更高效的 LongAdder，但如果我们需要利用 CAS 比如 compareAndSet 等操作的话，就需要使用 AtomicLong 来完成。
+
 ### 并发辅助类
 
 1. CountDownLatch：利用它可以实现类似计数器的功能。比如有一个任务A，它要等待其他4个任务执行完毕之后才能执行，此时就可以利用CountDownLatch来实现这种功能了。
