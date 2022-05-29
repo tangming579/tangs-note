@@ -3,11 +3,24 @@
 ### lambda
 
 - 函数式接口：接口中有且仅有一个抽象方法
-- 方法引用
+- 方法引用：使用 :: ，通过方法的名字来指向一个方法。
+  - 构造器引用：Car::new
+  - 静态方法引用：Car::collide
+  - 对象方法引用：Car::repair
+  - 特定对象的方法引用：cars.forEach(police::follow)
 
 ### Stream
 
 流是从支持数据处理操作的源生成的字节序列，源可以是数组、文件、集合、函数。它不是数据结构并不保存数据，它的主要目的在于计算。
+
+Optional
+
+```java
+String isoCode = Optional.ofNullable(user).map(User::getAddress).map(Address::getCountry)
+                .map(Country::getIsocode).orElse("Unknow");
+```
+
+
 
 ### 泛型
 
