@@ -24,6 +24,8 @@ String isoCode = Optional.ofNullable(user).map(User::getAddress).map(Address::ge
 
 ### 泛型
 
+参考：https://segmentfault.com/a/1190000039835272
+
 ## 1. 多线程
 
 ### 实现多线程方式
