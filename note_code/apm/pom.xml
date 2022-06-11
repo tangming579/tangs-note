@@ -19,6 +19,7 @@
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 		<powermock.version>2.0.7</powermock.version>
 		<mockito-core.version>3.5.13</mockito-core.version>
+		<hutool.version>4.5.7</hutool.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -88,6 +89,12 @@
 			<groupId>org.elasticsearch.client</groupId>
 			<artifactId>elasticsearch-rest-high-level-client</artifactId>
 			<version>6.8.12</version>
+		</dependency>
+		<!--Hutool Java工具包-->
+		<dependency>
+			<groupId>cn.hutool</groupId>
+			<artifactId>hutool-all</artifactId>
+			<version>${hutool.version}</version>
 		</dependency>
 	</dependencies>
 

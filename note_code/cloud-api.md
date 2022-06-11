@@ -72,6 +72,31 @@ elasticsearch-rest-high-level-client
 </dependency>
 ```
 
+#### ArgumentCaptor
+
+- argument.capture() 捕获方法参数
+- argument.getValue() 获取方法参数值，如果方法进行了多次调用，它将返回最后一个参数值
+- argument.getAllValues() 方法进行多次调用后，返回多个参数值
+
+举例：
+
+```java
+@Test  
+public void argumentCaptorTest() {  
+    List mock = mock(List.class);  
+    List mock2 = mock(List.class);  
+    mock.add("John");  
+    mock2.add("Brian");  
+    mock2.add("Jim");      
+    ArgumentCaptor argument = ArgumentCaptor.forClass(String.class);    
+    verify(mock).add(argument.capture());  
+    assertEquals("John", argument.getValue());  
+    verify(mock2, times(2)).add(argument.capture());  
+    assertEquals("Jim", argument.getValue());  
+    assertArrayEquals(new Object[]{"Brian","Jim"},argument.getAllValues().toArray());  
+}  
+```
+
 
 
 ### jacoco
