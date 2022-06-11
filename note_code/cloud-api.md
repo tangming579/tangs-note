@@ -8,6 +8,17 @@
 
 当括号中的内容为true时，使用该注解的类被实例化
 
+### @Before, @BeforeClass
+
+| **特性**           | **Junit 4**  | **Junit 5** |
+| ------------------ | ------------ | ----------- |
+| 注解在静态方法上   | @BeforeClass | @BeforeAll  |
+| 注解在静态方法上   | @AfterClass  | @AfterAll   |
+| 注解在非静态方法上 | @Before      | @BeforeEach |
+| 注解在非静态方法上 | @After       | @AfterEach  |
+
+![enter image description here](https://i.stack.imgur.com/HKspz.png)
+
 ## 类库
 
 ### kubernetes-client
@@ -60,6 +71,8 @@ elasticsearch-rest-high-level-client
     <scope>test</scope>
 </dependency>
 ```
+
+
 
 ### jacoco
 
