@@ -125,4 +125,6 @@ public void argumentCaptorTest() {
 
 ## 其他
 
-### 
+#### map.computeIfAbsent
+
+对 hashMap 中指定 key 的值进行重新计算，如果不存在这个 key，则添加到 hashMap 中。
