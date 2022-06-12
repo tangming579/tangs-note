@@ -1,6 +1,7 @@
 package com.tm.apm.controller;
 
 import com.tm.apm.pojo.overview.TraceData;
+import com.tm.apm.service.conditional.AbstractService;
 import com.tm.apm.service.IndexService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiImplicitParam;
@@ -9,8 +10,6 @@ import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 /**
  * @author tangming
@@ -25,10 +24,26 @@ public class IndexController {
     @Autowired
     private IndexService indexService;
 
+    @Autowired
+    private AbstractService abstractService;
+
     @ApiOperation("Test接口")
     @GetMapping()
     public String Test() {
         return "hello";
+    }
+
+    @ApiOperation("conditional接口")
+    @GetMapping("conditional")
+    public String ConditionalTest(){
+        return abstractService.showMessage();
+    }
+
+    @ApiOperation("创建索引")
+    @GetMapping("CreateIndex")
+    public String CreateIndex(){
+        indexService.createIndex();
+        return "成功";
     }
 
     @ApiOperation("Trace数据")
