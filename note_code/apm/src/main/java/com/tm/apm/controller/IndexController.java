@@ -1,15 +1,16 @@
 package com.tm.apm.controller;
 
 import com.tm.apm.pojo.overview.TraceData;
+import com.tm.apm.service.IndexService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiImplicitParam;
 import io.swagger.annotations.ApiImplicitParams;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 /**
  * @author tangming
@@ -20,6 +21,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/index")
 public class IndexController {
+
+    @Autowired
+    private IndexService indexService;
 
     @ApiOperation("Test接口")
     @GetMapping()
@@ -38,5 +42,12 @@ public class IndexController {
                                @RequestParam(value = "interval", defaultValue = "1d") String interval) {
 
         return null;
+    }
+
+    @GetMapping(value = "/traces/{traceId}/pods")
+    @ApiOperation(value = "根据traceId查询调用链详情")
+    public String getTracePods(String tenantId) {
+        indexService.createIndex();
+        return "success";
     }
 }

@@ -1,5 +1,6 @@
 package com.tm.apm.config;
 
+import com.tm.apm.service.IndexService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
@@ -34,5 +35,10 @@ public class AppConfig {
                 .apis(RequestHandlerSelectors.basePackage("com.tm.apm.controller"))
                 .paths(PathSelectors.any())
                 .build();
+    }
+
+    @Bean
+    public IndexService indexService(){
+        return new IndexService();
     }
 }
