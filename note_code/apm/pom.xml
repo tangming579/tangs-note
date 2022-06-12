@@ -20,6 +20,7 @@
 		<powermock.version>2.0.7</powermock.version>
 		<mockito-core.version>3.5.13</mockito-core.version>
 		<hutool.version>4.5.7</hutool.version>
+		<jacoco-plugin.version>0.8.7</jacoco-plugin.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -96,6 +97,12 @@
 			<artifactId>hutool-all</artifactId>
 			<version>${hutool.version}</version>
 		</dependency>
+		<dependency>
+			<groupId>org.jacoco</groupId>
+			<artifactId>org.jacoco.agent</artifactId>
+			<version>${jacoco-plugin.version}</version>
+			<classifier>runtime</classifier>
+		</dependency>
 	</dependencies>
 
 	<build>
@@ -110,6 +117,52 @@
 							<artifactId>lombok</artifactId>
 						</exclude>
 					</excludes>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.jacoco</groupId>
+				<artifactId>jacoco-maven-plugin</artifactId>
+				<version>${jacoco-plugin.version}</version>
+				<configuration>
+					<!-- 本地编译使用true -->
+					<skip>false</skip>
+					<includes>
+						<include>com/**/*</include>
+					</includes>
+				</configuration>
+				<executions>
+					<execution>
+						<id>default-instrument</id>
+						<goals>
+							<goal>instrument</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>default-restore-instrumented-classes</id>
+						<goals>
+							<goal>restore-instrumented-classes</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>report</id>
+						<phase>prepare-package</phase>
+						<goals>
+							<goal>report</goal>
+						</goals>
+						<configuration>
+							<dataFile>${project.build.directory}/coverage.exec</dataFile>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>2.19.1</version>
+				<configuration>
+					<systemPropertyVariables>
+						<jacoco-agent.destfile>${project.build.directory}/coverage.exec</jacoco-agent.destfile>
+					</systemPropertyVariables>
 				</configuration>
 			</plugin>
 		</plugins>

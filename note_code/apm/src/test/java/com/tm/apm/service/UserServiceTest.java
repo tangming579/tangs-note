@@ -79,7 +79,7 @@ public class UserServiceTest {
         String text = JSONUtil.parse(new UserDO("test", 1L)).toString();
         String createText = JSONUtil.parse(userCreateCaptor.getValue()).toString();
         Assert.assertEquals("用户创建不一致", text, createText);
-        // 验证依赖对象
+        // 验证模拟对象所有方法调用是否都得到验证
         Mockito.verifyNoMoreInteractions(idGenerator, userDAO);
     }
 
