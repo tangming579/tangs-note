@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: elasticsearch
+  namespace: tangming
+  labels:
+    app: elasticsearch
+    version: v6.8.22
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: elasticsearch
+      version: v6.8.22
+  template:
+    metadata:
+      labels:
+        app: elasticsearch
+        version: v6.8.22
+    spec:
+      containers:
+      - name: elasticsearch
+        image: 172.22.50.227/system_containers/elasticsearch:6.8.22
+        imagePullPolicy: IfNotPresent  #默认值,本地有则使用本地镜像,不拉取
+        ports:
+        - containerPort: 9200
+          name: es-cli
+        - containerPort: 9300
+          name: es-inner
+        env:
+        - name: discovery.type
+          value: single-node
+        # - name: ES_JAVA_OPTS
+        #   value: -Xmx1g -Xms1g
+        volumeMounts:     #容器内挂载点
+         - mountPath: /usr/share/elasticsearch/data/
+           name: vol-data
+      volumes:
+      - name: vol-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: elasticsearch
+  namespace: tangming
+  labels:
+    app: elasticsearch
+    version: v6.8.22
+spec:
+  type: NodePort
+  ports:
+  - name: es-cli
+    nodePort: 31920
+    port: 9200
+    protocol: TCP
+    targetPort: 9200
+  - name: es-inner
+    nodePort: 31930
+    port: 9300
+    protocol: TCP
+    targetPort: 9300    
+  selector:
+    app: elasticsearch

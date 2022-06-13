@@ -1,0 +1,16 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  creationTimestamp: "2021-12-27T02:18:59Z"
+  name: podsecuritypolicy
+  namespace: tangming
+  resourceVersion: "15433039"
+  uid: f45dd47b-514d-45a4-8b18-aed74f9c0059
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: podsecuritypolicy
+subjects:
+- kind: ServiceAccount
+  name: default
+  namespace: tangming
