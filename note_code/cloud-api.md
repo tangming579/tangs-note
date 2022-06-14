@@ -128,3 +128,15 @@ public void argumentCaptorTest() {
 #### map.computeIfAbsent
 
 对 hashMap 中指定 key 的值进行重新计算，如果不存在这个 key，则添加到 hashMap 中。
+
+#### CompletableFuture.supplyAsync
+
+该任务将在`ForkJoinPool.commonPool()`中异步完成运行，最后，`supplyAsync()`将返回新的`CompletableFuture`，其值是通过调用给定的Supplier所获得的值。
+
+#### parallelStream
+
+parallelStream其实就是一个并行执行的流.它通过默认的ForkJoinPool,可能提高你的多线程任务的速度.
+
+#### Collections.synchronizedList
+
+实现List的线程安全
