@@ -1,0 +1,4 @@
+sudo docker run -d --name skywalking-ui --restart always -p 8000:8080 --link skywalking-oap:skywalking-oap -e TZ=Asia/Shanghai -e SW_OAP_ADDRESS=http://172.22.16.135:80 d784b2bb89af
+
+
+sudo docker run --name skywalking-oap        --restart always -d        -p 1234:1234        -p 8762:11800        -p 80:12800        -e TZ=Asia/Shanghai        -e SW_STORAGE=elasticsearch        -e SW_STORAGE_ES_CLUSTER_NODES=172.22.16.135:9200        899e9455d021
