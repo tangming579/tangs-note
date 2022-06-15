@@ -2,3 +2,8 @@ sudo docker run -d --name skywalking-ui --restart always -p 8000:8080 --link sky
 
 
 sudo docker run --name skywalking-oap        --restart always -d        -p 1234:1234        -p 8762:11800        -p 80:12800        -e TZ=Asia/Shanghai        -e SW_STORAGE=elasticsearch        -e SW_STORAGE_ES_CLUSTER_NODES=172.22.16.135:9200        899e9455d021
+
+
+-javaagent:D:\ElasticStack\apache-skywalking-apm-bin\agent\skywalking-agent.jar=agent.service_name=TENANT-11@@namespace-11::OrderApp,collector.backend_service=172.22.16.135:11800
+
+-javaagent:D:\ElasticStack\apache-skywalking-apm-bin\agent\skywalking-agent.jar -Dskywalking.agent.service_name=OrderApp -Dskywalking.collector.backend_service=172.22.16.135:11800
