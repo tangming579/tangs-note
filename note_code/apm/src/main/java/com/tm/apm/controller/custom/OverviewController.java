@@ -1,4 +1,4 @@
-package com.tm.apm.controller;
+package com.tm.apm.controller.custom;
 
 import com.tm.apm.constant.ApmCommonConstant;
 import com.tm.apm.dto.ResultDto;

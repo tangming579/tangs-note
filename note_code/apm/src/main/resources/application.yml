@@ -17,4 +17,4 @@ elasticsearch:
   maxConnectPerRoute: 100
 userService:
   canModify: true
-storageType: B
+storageType: C
