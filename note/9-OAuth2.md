@@ -60,11 +60,15 @@ OAuth2.0定义了四种授权模式，它们分别是：
 
 ## Spring Security
 
+`spring security`使用目的：验证，授权，攻击防护。
 
+原理：创建大量的filter和interceptor来进行请求的验证和拦截，以此来达到安全的效果。
 
-- authorization_code — 授权码模式(即先登录获取code,再获取token)
-- password — 密码模式(将用户名,密码传过去,直接获取token)
-- client_credentials — 客户端模式(无用户,用户向客户端注册,然后客户端以自己的名义向’服务端’获取资源)
+### Grant Types
+
+- authorization_code — 授权码模式（即先登录获取code,再获取token）
+- password — 密码模式（将用户名,密码传过去,直接获取token）
+- client_credentials — 客户端模式（客户端用它自己的客户单凭证去请求获取访问令牌）
 - implicit — 简化模式(在redirect_uri 的 Hash 传递token; Auth客户端运行在浏览器中,如JS,Flash)
 - refresh_token — 刷新access_token
 
@@ -81,3 +85,18 @@ OAuth2.0定义了四种授权模式，它们分别是：
 - /oauth/check_token：用于资源服务访问的令牌解析端点
 
 - /oauth/token_key：提供公有密匙的端点，如果你使用JWT令牌的话
+
+### 受保护的资源配置
+
+受保护的资源（或者叫远程资源）可以用OAuth2ProtectedResourceDetails类型的bean来定义。一个被保护的资源由下列属性：
+
+- id ：资源的id。这个id只是用于客户端查找资源。
+- clientId ：OAuth Client id。
+- clientSecret ：关联的资源的secret。默认非空
+- accessTokenUri ：提供access_token的端点的uri
+- scope ：逗号分隔的字符串，代表访问资源的范围。默认为空
+- clientAuthenticationScheme ：客户端认证所采用的schema。建议的值："http_basic"和"form"。默认是"http_basic"。
+
+不同的授权类型有不同的OAuth2ProtectedResourceDetails的具体实现（例如：ClientCredentialsResourceDetails是"client_credentials"类型的具体实现）
+
+- userAuthorizationUri ：用户授权uri，非必需的。
