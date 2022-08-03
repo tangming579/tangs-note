@@ -74,16 +74,12 @@ OAuth2.0定义了四种授权模式，它们分别是：
 
 ### 4.2 oauth2内置接口清单
 
-- /oauth/authorize：授权端点
-
-- /oauth/token：获取令牌端点
-
-- /oauth/confirm_access：用户确认授权提交端点
-
-- /oauth/error：授权服务错误信息端点
-
+- /oauth/token：获取 Token
 - /oauth/check_token：用于资源服务访问的令牌解析端点
-
+- /oauth/authorize：授权端点
+- /oauth/confirm_access：用户确认授权提交端点
+- /oauth/error：授权服务错误信息端点
+- /oauth/check_token：用于资源服务访问的令牌解析端点
 - /oauth/token_key：提供公有密匙的端点，如果你使用JWT令牌的话
 
 ### 4.3 受保护的资源配置
@@ -103,7 +99,17 @@ OAuth2.0定义了四种授权模式，它们分别是：
 
 ### 4.4 AuthorizationServerConfigurerAdapter
 
-配置OAUth2 授权服务器的配置类接口，添加了@EnableAuthorizationServer，spring会自动注入。接口有三个方法，可以实现客户端配置、安全功能、以及各个Endpoint（端点）的相关配置。
+配置OAUth2 授权服务器的配置类接口
+
+接口有三个方法
+
+- **AuthorizationServerSecurityConfigurer**：访问安全配置
+
+- **ClientDetailsServiceConfigurer**：配置 clientDetailsService 注入,即决定clientDeatils信息查询，校验的实现类。
+
+  系统提供的两个实现类：JdbcClientDetailsService、InMemoryClientDetailsService
+
+- **AuthorizationServerEndpointsConfigurer**：访问端点配置：tokenStroe即token生成和管理类、TokenGranter即不同授权认证方式的实现类。
 
 ```java
 @Configuration
@@ -115,17 +121,18 @@ public class AuthorizationServer extends AuthorizationServerConfigurerAdapter {
     @Override
     public void configure(AuthorizationServerSecurityConfigurer security) throws Exception { 
         security
-                // 开启/oauth/token_key验证端口无权限访问
+                // oauth/check_token 验证端口无权限访问
                 .checkTokenAccess("permitAll()")
-                //主要是让/oauth/token支持client_id和client_secret做登陆认证如果开启了,
-                //那么就在BasicAuthenticationFilter之前
-                //添加ClientCredentialsTokenEndpointFilter,使用ClientDetailsUserDetailsService来进行登陆认证
+    			// 如果配置支持allowFormAuthenticationForClients的，且url中有client_id和client_secret的会走   
+    			// ClientCredentialsTokenEndpointFilter来保护;
+    			// 如果没有支持allowFormAuthenticationForClients
+             	// 或者有支持但是url中没有client_id和client_secret的，走basic认证保
                 .allowFormAuthenticationForClients();
     }
     //用来配置客户端详情服务（ClientDetailsService），客户端详情信息在这里进行初始化
     @Override
     public void configure(ClientDetailsServiceConfigurer clients) throws Exception {
-         // 自定义
+         // 自定义保存客户端信息方式
         clients.withClientDetails(clientService);
     }
     //用来配置授权（authorization）以及令牌（token）的访问端点和令牌服务(token services)。
@@ -143,6 +150,14 @@ public class AuthorizationServer extends AuthorizationServerConfigurerAdapter {
 ```
 
 ### 4.5 ResourceServerConfigurerAdapter
+
+资源服务器配置
+
+内部关联了ResourceServerSecurityConfigurer和HttpSecurity。前者与资源安全配置相关，后者与http安全配置相关
+
+WebSecurityConfigurerAdapter是默认情况下Spring security的http配置；
+
+ResourceServerConfigurerAdapter是默认情况下spring security oauth 的http配置。
 
 ```java
 @Slf4j
@@ -170,7 +185,7 @@ public class ResourceAutoConfiguration extends ResourceServerConfigurerAdapter {
         resources.resourceId(authProperties.getResourceId()).tokenServices(tokenServices());
     }
     
-        @Override
+    @Override
     public void configure(HttpSecurity http) throws Exception {
         http.authorizeRequests()
                 // 配置文件中的 URL 进行拦截
@@ -180,3 +195,11 @@ public class ResourceAutoConfiguration extends ResourceServerConfigurerAdapter {
     }
 ```
 
+### 4.6 ResourceServerTokenServices
+
+ResourceServerTokenServices 定义了两个签名方法:
+
+- OAuth2Authentication loadAuthentication(String accessToken) ：用于从指定的令牌字符串中抽取认证信息, 构建 OAuth2Authentication 对象.
+
+- OAuth2AccessToken readAccessToken(String accessToken)： 仅用于 CheckTokenEndpoint 端点, 后者用于在授权服务器接收资源服务器的请求校验令牌. 所以对于资源服务器来说, 并不需要实现它.
+  
