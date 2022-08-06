@@ -74,13 +74,12 @@ OAuth2.0定义了四种授权模式，它们分别是：
 
 ### 4.2 oauth2内置接口清单
 
-- /oauth/token：获取 Token
-- /oauth/check_token：用于资源服务访问的令牌解析端点
-- /oauth/authorize：授权端点
-- /oauth/confirm_access：用户确认授权提交端点
-- /oauth/error：授权服务错误信息端点
-- /oauth/check_token：用于资源服务访问的令牌解析端点
-- /oauth/token_key：提供公有密匙的端点，如果你使用JWT令牌的话
+- /oauth/token：(令牌端，获取 token)
+- /oauth/check_token：(资源服务器用来校验token)
+- /oauth/authorize：（授权端点，授权码模式使用）
+- /oauth/confirm_access：(用户发送确认授权)
+- /oauth/error：（授权服务错误信息端点）
+- /oauth/token_key：(如果使用JWT，可以获的公钥用于 token 的验签)
 
 ### 4.3 受保护的资源配置
 
@@ -155,29 +154,25 @@ public class AuthorizationServer extends AuthorizationServerConfigurerAdapter {
 
 内部关联了ResourceServerSecurityConfigurer和HttpSecurity。前者与资源安全配置相关，后者与http安全配置相关
 
-WebSecurityConfigurerAdapter是默认情况下Spring security的http配置；
+- ResourceServerSecurityConfigurer中主要包括：
+  1. tokenServices ：ResourceServerTokenServices 类的实例，用来实现令牌服务。
+  2. tokenStore ：TokenStore类的实例，指定令牌如何访问
+  3. resourceId ：这个资源服务的ID，这个属性是可选的，但是推荐设置并在授权服务中进行验证
+  4. 其他的拓展属性例如 tokenExtractor 令牌提取器用来提取请求中的令牌。
 
-ResourceServerConfigurerAdapter是默认情况下spring security oauth 的http配置。
+- HttpSecurity配置这个与Spring Security类似：
+  1. 请求匹配器，用来设置需要进行保护的资源路径，默认的情况下是保护资源服务的全部路径。
+  2. 通过 http.authorizeRequests()来设置受保护资源的访问规则
+  3. 其他的自定义权限保护规则通过 HttpSecurity 来进行配置。
 
 ```java
-@Slf4j
 @EnableResourceServer
-@Configuration
-@EnableConfigurationProperties(AuthProperties.class)
-@ConditionalOnProperty(prefix = "paas.auth", value = "resource-enabled", havingValue = "true")
-@Order(1)
 public class ResourceAutoConfiguration extends ResourceServerConfigurerAdapter {
-
-    @Bean
-    PaasResourceServerTokenServices tokenServices() {
-    }    
-    
     /**
-     * ResourceServerSecurityConfigurer主要配置以下几方面：
-     * tokenServices：ResourceServerTokenServices 类的实例，用来实现令牌访问服务，如果资源服务和授权服务不在一块，就需要 通过RemoteTokenServices来访问令牌
+     * tokenServices：ResourceServerTokenServices 类的实例，用来实现令牌访问服务，
+                      如果资源服务和授权服务不在一块，就需要通过RemoteTokenServices来访问令牌
      * tokenStore：TokenStore类的实例，定义令牌的访问方式
      * resourceId：这个资源服务的ID
-     * 其他的拓展属性例如 tokenExtractor 令牌提取器用来提取请求中的令牌。
      */
     @Override
     public void configure(ResourceServerSecurityConfigurer resources) {
@@ -195,11 +190,30 @@ public class ResourceAutoConfiguration extends ResourceServerConfigurerAdapter {
     }
 ```
 
-### 4.6 ResourceServerTokenServices
+#### 4.5.1 ResourceServerTokenServices
 
-ResourceServerTokenServices 定义了两个签名方法:
+OAuth 2.0 资源服务器的token管理，主要功能是：生成token、刷新token、获取token
 
-- OAuth2Authentication loadAuthentication(String accessToken) ：用于从指定的令牌字符串中抽取认证信息, 构建 OAuth2Authentication 对象.
+```java
+public interface ResourceServerTokenServices {
+    
+    //检验token的有效性，只返回有限的信息
+    OAuth2Authentication loadAuthentication(String accessToken);
 
-- OAuth2AccessToken readAccessToken(String accessToken)： 仅用于 CheckTokenEndpoint 端点, 后者用于在授权服务器接收资源服务器的请求校验令牌. 所以对于资源服务器来说, 并不需要实现它.
-  
+    // 获取token的完整信息的
+    OAuth2AccessToken readAccessToken(String accessToken);
+}
+```
+
+默认的实现类有4个
+
+- DefaultTokenServices：默认的令牌服务类
+- RemoteTokenServices：通过 restTemplate 构造http请求授权服务器的**checkToken**接口获取返回的用户权限值
+- SpringSocialTokenServices
+- UserInfoTokenServices
+
+
+
+1. 使用基本的token，需要去认证中心验证token是否有效等，在高并发时会有性能问题
+2. 令牌改成JWT格式，解决了性能问题，当然也可以考虑将令牌存放在redis中也可以解决性能问题
+3. 本文栗子中使用对称加密的JWT令牌，生产环境肯定是使用非对称加密的密钥对
