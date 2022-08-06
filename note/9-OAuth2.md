@@ -58,6 +58,22 @@ OAuth2.0定义了四种授权模式，它们分别是：
 
 2、授权码需要和client id/client secret共同完成认证，才能够获得access_token。就算授权码如果失窃，单凭授权码是无法得到access_token的。
 
+## 4. 设计
+
+### 授权服务器
+
+1. 对外接口提供：获取token、验证token、注册、修改、删除服务、获取服务列表
+2. token认证方式：(1) client_id、client_secret、(2) basic
+3. 客户端信息如何保存：(1)内存、(2)数据库、(3)自定义
+4. token 生成方式、过期逻辑
+5. 密码加密方式
+
+### 资源服务器
+
+1. 标识资源 id
+2. 如何验证 token：(1)调用授权服务接口、(2) Jwt自校验
+3. 哪些接口需要校验（默认全部）
+
 ## 4. Spring Security
 
 `spring security`使用目的：验证，授权，攻击防护。
@@ -108,7 +124,7 @@ OAuth2.0定义了四种授权模式，它们分别是：
 
   系统提供的两个实现类：JdbcClientDetailsService、InMemoryClientDetailsService
 
-- **AuthorizationServerEndpointsConfigurer**：访问端点配置：tokenStroe即token生成和管理类、TokenGranter即不同授权认证方式的实现类。
+- **AuthorizationServerEndpointsConfigurer**：访问端点配置：tokenStore即token生成和管理类、TokenGranter即不同授权认证方式的实现类。
 
 ```java
 @Configuration
