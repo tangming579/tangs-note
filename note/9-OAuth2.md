@@ -92,7 +92,7 @@ OAuth2.0定义了四种授权模式，它们分别是：
 
 - /oauth/token：(令牌端，获取 token)
 - /oauth/check_token：(资源服务器用来校验token)
-- /oauth/authorize：（授权端点，授权码模式使用）
+- /oauth/authorize：（申请授权码，授权码模式使用）
 - /oauth/confirm_access：(用户发送确认授权)
 - /oauth/error：（授权服务错误信息端点）
 - /oauth/token_key：(如果使用JWT，可以获的公钥用于 token 的验签)
@@ -233,3 +233,11 @@ public interface ResourceServerTokenServices {
 1. 使用基本的token，需要去认证中心验证token是否有效等，在高并发时会有性能问题
 2. 令牌改成JWT格式，解决了性能问题，当然也可以考虑将令牌存放在redis中也可以解决性能问题
 3. 本文栗子中使用对称加密的JWT令牌，生产环境肯定是使用非对称加密的密钥对
+4. 使用JWT令牌格式的话，用户认证通过会得到一个JWT令牌，JWT令牌中已经包括了用户相关的信息，客户端只需要携带JWT访问资源服务，资源服务根据事先约定的算法自行完成令牌校验，无需每次都请求认证服务器完成授权，节省开销。
+
+
+
+
+
+1. 非对称加密问题
+2. 权限动态配置问题
