@@ -29,26 +29,18 @@ public class JwtHelper {
 
     static {
         Security.addProvider(new BouncyCastleProvider());
-        X509Certificate cert;
         try {
-            // 从yml中读取配置
-            PropertiesTool propertiesTool = ApplicationContextProvider.getBean(PropertiesTool.class);
-            InputStream streamCer = JwtHelper.class.getClassLoader().getResourceAsStream(propertiesTool.getCerFilePath());
-            InputStream streamPri = JwtHelper.class.getClassLoader().getResourceAsStream(propertiesTool.getCerPriKeyPath());
-            int streamPriLen = Objects.requireNonNull(streamPri).available();
 
-            cert = SM2CertUtil.getX509Certificate(streamCer);
-
-            byte[] priKeyData = new byte[streamPriLen];
-            streamPri.read(priKeyData);
-            // 从证书中获取公钥，从私钥文件中获取私钥
-            publicKey = SM2CertUtil.getBCECPublicKey(cert);
-            privateKey = BCECUtil.convertSEC1ToBCECPrivateKey(priKeyData);
 
         } catch (Exception e) {
             log.error("JWT工具初始化异常", e);
         }
 
+    }
+
+    public static void setKey(BCECPublicKey _publicKey, BCECPrivateKey _privateKey) {
+        publicKey = _publicKey;
+        privateKey = _privateKey;
     }
 
     /**
