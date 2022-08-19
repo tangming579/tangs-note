@@ -92,10 +92,10 @@ OAuth2.0定义了四种授权模式，它们分别是：
 
 - /oauth/token：(令牌端，获取 token)
 - /oauth/check_token：(资源服务器用来校验token)
+- /oauth/token_key：(如果使用JWT，可以获的公钥用于 token 的验签)
 - /oauth/authorize：（申请授权码，授权码模式使用）
 - /oauth/confirm_access：(用户发送确认授权)
 - /oauth/error：（授权服务错误信息端点）
-- /oauth/token_key：(如果使用JWT，可以获的公钥用于 token 的验签)
 
 ### 4.3 受保护的资源配置
 
@@ -237,7 +237,8 @@ public interface ResourceServerTokenServices {
 
 
 
+- AccessTokenConverter：把token字符串转换成OAuth2AccessToken对象。
 
+- TokenEnhancer：在OAuth2AccessToken里添加额外的信息。
 
-1. 非对称加密问题
-2. 权限动态配置问题
+- JwtAccessTokenConverter：即实现了AccessTokenConverter接口，也实现了TokenEnhancer接口。
