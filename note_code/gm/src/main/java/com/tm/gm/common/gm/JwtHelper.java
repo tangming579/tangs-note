@@ -13,6 +13,8 @@ import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPrivateKey;
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPublicKey;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.InputStream;
 import java.security.Security;
 import java.security.cert.X509Certificate;
@@ -24,23 +26,45 @@ import java.util.Objects;
  * @author tangming
  * @date 2022/8/19
  */
+
+/**
+ * 生成jwt的工具类，基于auth0.java-jwt封装
+ * 签名算法使用SM3WithSM2
+ * payload统一使用Map<String, String>类型
+ *
+ * @author Created by zkk on 2020/9/22
+ **/
 @Slf4j
 public class JwtHelper {
 
     static {
         Security.addProvider(new BouncyCastleProvider());
+        X509Certificate cert;
         try {
+            String path = "H:\\Projects\\tangs-note\\note_code\\gm\\target\\";
+            // 从yml中读取配置
+            //InputStream streamCer =JwtHelper.class.getClassLoader().getResourceAsStream(path + "test.sm2.cer");
+            //InputStream streamPri = JwtHelper.class.getClassLoader().getResourceAsStream(path + "test.sm2.pri");
 
+            File f = new File(path + "test.sm2.cer");
+            File f1 = new File(path + "test.sm2.pri");
+            InputStream streamCer = new FileInputStream(f);
+            InputStream streamPri = new FileInputStream(f1);
+
+            int streamPriLen = Objects.requireNonNull(streamPri).available();
+
+            cert = SM2CertUtil.getX509Certificate(streamCer);
+
+            byte[] priKeyData = new byte[streamPriLen];
+            streamPri.read(priKeyData);
+            // 从证书中获取公钥，从私钥文件中获取私钥
+            publicKey = SM2CertUtil.getBCECPublicKey(cert);
+            privateKey = BCECUtil.convertSEC1ToBCECPrivateKey(priKeyData);
 
         } catch (Exception e) {
             log.error("JWT工具初始化异常", e);
         }
 
-    }
-
-    public static void setKey(BCECPublicKey _publicKey, BCECPrivateKey _privateKey) {
-        publicKey = _publicKey;
-        privateKey = _privateKey;
     }
 
     /**

@@ -33,11 +33,29 @@ public class SMAlgorithm extends Algorithm {
     }
 
     @Override
+    public byte[] sign(byte[] headerBytes, byte[] payloadBytes) throws SignatureGenerationException {
+        String header = new String(headerBytes);
+        String payLoad = new String(payloadBytes);
+        byte[] hash = combineSignByte(headerBytes, payloadBytes);
+        byte[] signatureByte;
+        try {
+            signatureByte = SM2Util.sign(privateKey, hash);
+        } catch (CryptoException e) {
+            throw new SignatureGenerationException(this, e);
+        }
+
+        return signatureByte;
+    }
+
+    @Override
     public void verify(DecodedJWT jwt) throws SignatureVerificationException {
-        byte[] signatureBytes = Base64.decodeBase64(jwt.getSignature());
+        String signature = jwt.getSignature();
+        String header = jwt.getHeader();
+        String payLoad = jwt.getPayload();
+        byte[] signatureBytes = Base64.decodeBase64(signature);
         byte[] data = combineSignByte(jwt.getHeader().getBytes(), jwt.getPayload().getBytes());
         try {
-            if(!SM2Util.verify(publicKey, data, signatureBytes)) {
+            if (!SM2Util.verify(publicKey, data, signatureBytes)) {
                 throw new SignatureVerificationException(this);
             }
         } catch (Exception e) {
@@ -50,19 +68,6 @@ public class SMAlgorithm extends Algorithm {
     public byte[] sign(byte[] contentBytes) throws SignatureGenerationException {
         // 不支持该方法
         throw new RuntimeException("该方法已过时");
-    }
-
-    @Override
-    public byte[] sign(byte[] headerBytes, byte[] payloadBytes) throws SignatureGenerationException {
-        byte[] hash = combineSignByte(headerBytes, payloadBytes);
-        byte[] signatureByte;
-        try {
-            signatureByte = SM2Util.sign(privateKey, hash);
-        } catch (CryptoException e) {
-            throw new SignatureGenerationException(this, e);
-        }
-
-        return signatureByte;
     }
 
     /**
