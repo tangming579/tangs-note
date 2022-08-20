@@ -7,10 +7,12 @@ import com.auth0.jwt.interfaces.DecodedJWT;
 import com.auth0.jwt.interfaces.JWTVerifier;
 import com.tm.gm.common.utils.BCECUtil;
 import com.tm.gm.common.utils.SM2Util;
+import com.google.common.collect.Maps;
 import com.tm.gm.common.utils.cert.SM2CertUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPrivateKey;
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPublicKey;
+import org.bouncycastle.jcajce.provider.asymmetric.ec.GMCipherSpi;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
 import java.io.File;
@@ -57,6 +59,10 @@ public class JwtHelper {
 
             byte[] priKeyData = new byte[streamPriLen];
             streamPri.read(priKeyData);
+
+
+
+
             // 从证书中获取公钥，从私钥文件中获取私钥
             publicKey = SM2CertUtil.getBCECPublicKey(cert);
             privateKey = BCECUtil.convertSEC1ToBCECPrivateKey(priKeyData);
@@ -108,10 +114,10 @@ public class JwtHelper {
      * @return jwt payload
      */
     public static Map<String, String> verifyToken(String token) {
-        JWTVerifier verifier = JWT.require(ALGORITHM).withIssuer(ISSUER).build();
+        JWTVerifier verifier = JWT.require(ALGORITHM).build();
         DecodedJWT jwt = verifier.verify(token);
         Map<String, Claim> map = jwt.getClaims();
-        Map<String, String> resultMap = new HashMap<>();
+        Map<String, String> resultMap = Maps.newHashMap();
         map.forEach((k, v) -> resultMap.put(k, v.asString()));
         return resultMap;
     }

@@ -8,6 +8,7 @@ import com.tm.gm.common.utils.SM2Util;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.tomcat.util.codec.binary.Base64;
 import org.bouncycastle.crypto.CryptoException;
+import org.bouncycastle.crypto.signers.SM2Signer;
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPrivateKey;
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPublicKey;
 
@@ -32,10 +33,17 @@ public class SMAlgorithm extends Algorithm {
         }
     }
 
+    /**
+     * signature = base64encode(SM2(SM3(base64encode(jwt.header) + ‘.’ + base64encode(jwt.payload)), ‘SECRET_KEY’))
+     *
+     * @param headerBytes
+     * @param payloadBytes
+     * @return
+     * @throws SignatureGenerationException
+     */
     @Override
     public byte[] sign(byte[] headerBytes, byte[] payloadBytes) throws SignatureGenerationException {
-        String header = new String(headerBytes);
-        String payLoad = new String(payloadBytes);
+        //base64encode(jwt.header) + ‘.’ + base64encode(jwt.payload))
         byte[] hash = combineSignByte(headerBytes, payloadBytes);
         byte[] signatureByte;
         try {
@@ -50,14 +58,11 @@ public class SMAlgorithm extends Algorithm {
     @Override
     public void verify(DecodedJWT jwt) throws SignatureVerificationException {
         String signature = jwt.getSignature();
-        String header = jwt.getHeader();
-        String payLoad = jwt.getPayload();
         byte[] signatureBytes = Base64.decodeBase64(signature);
         byte[] data = combineSignByte(jwt.getHeader().getBytes(), jwt.getPayload().getBytes());
         try {
-            if (!SM2Util.verify(publicKey, data, signatureBytes)) {
-                throw new SignatureVerificationException(this);
-            }
+            Boolean verifyResult = SM2Util.verify(publicKey, data, signatureBytes);
+            System.out.printf(String.valueOf(verifyResult));
         } catch (Exception e) {
             throw new SignatureVerificationException(this);
         }
