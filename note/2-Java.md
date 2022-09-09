@@ -386,6 +386,8 @@ public static Session getSession() throws InfrastructureException {
 
 **Callable、Future、FutureTask**
 
+### 进程线程协程
+
 ## 2. 集合
 
 ### 集合分类
@@ -735,14 +737,17 @@ Mybatis底层封装了JDBC,使用了动态代理模式。
 
 4. 通过MapperProxy调用Mapper中增删改查的方法
 
-### 预编译
+### 数据库预编译
 
-- 概念：预编译语句就是将可能只有个别值不同的同一条 sql 语句中的值用占位符替代，可以视为将sql语句模板化或者说参数化。一次编译、多次运行，省去了解析优化等过程。
+- 概念：数据库接受到sql语句之后，需要词法和语义解析，优化sql语句，制定执行计划。这需要花费一些时间。但是很多情况，我们的一条sql语句可能会反复执行，或者每次执行的时候只有个别的值不同。预编译语句就是将可能只有个别值不同的同一条 sql 语句中的值用占位符替代，可以视为将sql语句模板化或者说参数化。一次编译、多次运行，省去了解析优化等过程。
+- 三个阶段：（往往 步骤 1、2 加起来的时间比 步骤 3的时间还要长）
+  1. 词法和语义解析
+  2. 优化sql语句，制定执行计划
+  3. 执行并返回结果
 - 作用：
   - 预编译之后的 sql 多数情况下可以直接执行，DBMS 不需要再次编译，提升性能
   - 防止 sql 注入：其后注入进来的参数系统将不会认为它会是一条SQL语句，而默认其是一个参数，参数中的or或者and 等就不是SQL语法保留字了。
-
-- Mybatis如何实现预编译：mybatis底层使用PreparedStatement，过程是先将带有占位符（即”?”）的sql模板发送至mysql服务器，由服务器对此无参数的sql进行编译后，将编译结果缓存，然后直接执行带有真实参数的sql。`核心是通过#{ } 实现的`。
+- Mybatis 如何实现预编译：mybatis 底层使用PreparedStatement，过程是先将带有占位符（即”?”）的sql模板发送至mysql服务器，由服务器对此无参数的sql进行编译后，将编译结果缓存，然后直接执行带有真实参数的sql。`核心是通过#{ } 实现的`。
 
 **Mabatis中#{}和${}的区别**
 
@@ -769,6 +774,10 @@ ${} 则只是简单的字符串替换；#{} 在预处理时，会把参数部分
   Dao接口里的方法，是不能重载的，因为是全限名+方法名的保存和寻找策略。Dao接口的工作原理是JDK动态代理，MyBatis运行时会使用JDK动态代理为Dao接口生产代理proxy对象，代理对象会拦截接口方法，转而执行MappedStatement所代表的sql，然后将sql执行结果返回。
 
   在MyBatis中，每一个< select >、< insert >、< update >、< delete >标签，都会被解析成一个MappedStatement对象。
+
+### PageHelper原理
+
+PageHelper是 MyBatis 的一个插件，内部实现了一个PageInterceptor拦截器。Mybatis会加载这个拦截器到拦截器链中。在我们使用过程中先使用PageHelper.startPage这样的语句在当前线程上下文中设置一个ThreadLocal变量，再利用PageInterceptor这个分页拦截器拦截，从ThreadLocal中拿到分页的信息，如果有分页信息拼装分页SQL（limit语句等）进行分页查询，最后再把ThreadLocal中的东西清除掉。
 
 ## 6. 其他
 
