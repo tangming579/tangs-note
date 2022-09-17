@@ -130,8 +130,8 @@ ThreadPoolExecutor新任务提交处理流程：
 
 workQueue一般分为以下几种
 
-- **ArrayBlockingQueue：** 一个基于数组的有界阻塞队列，此队列按先进先出原则对元素进行排序。
-- **LinkedBlockingQueue：** 一个基于链表结构的无界阻塞队列，此队列按先进先出排序元素，吞吐量通常要高于ArrayBlockingQueue。静态工厂方法Executors.newFixedThreadPool()使用了这个队列。
+- **ArrayBlockingQueue：** 一个基于数组的阻塞队列，按先进先出排序。初始化的时候，必须传入一个容量大小的值
+- **LinkedBlockingQueue：** 一个基于链表的阻塞队列，按先进先出排序，吞吐量通常要高于ArrayBlockingQueue。默认的容量大小为：Integer.MAX_VALUE 但不推荐；生产者的锁PutLock，消费者的锁takeLock
 - **SynchronousQueue：** 一个不存储元素的阻塞队列。每个插入操作必须等到另一个线程调用移除操作，否则插入操作一直处于阻塞状态，吞吐量通常要高于LinkedBlockingQueue，静态工厂方法Executors.newCachedThreadPool使用了这个队列。
 - **PriorityBlockingQueue：** 一个具有优先级的无限阻塞队列。
 
