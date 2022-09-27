@@ -55,19 +55,19 @@ public void start() {
                     }
 
                     try {
-                        // second data
+                        // 取到当前秒和上一秒的所有jobId
                         List<Integer> ringItemData = new ArrayList<>();
-                        int nowSecond = Calendar.getInstance().get(Calendar.SECOND);   // 避免处理耗时太长，跨过刻度，向前校验一个刻度；
+                        // 避免处理耗时太长，跨过刻度，向前校验一个刻度；
+                        int nowSecond = Calendar.getInstance().get(Calendar.SECOND);   
                         for (int i = 0; i < 2; i++) {
                             List<Integer> tmpData = ringData.remove((nowSecond + 60 - i) % 60);
                             if (tmpData != null) {
                                 ringItemData.addAll(tmpData);
                             }
                         }
+                        //将所有jobId放到执行线程池中
                         if (ringItemData.size() > 0) {
-                            // do trigger
                             for (int jobId : ringItemData) {
-                                // do trigger
                                 JobTriggerPoolHelper.trigger(jobId, TriggerTypeEnum.CRON, -1, null, null, null);
                             }
                             // clear
@@ -75,11 +75,9 @@ public void start() {
                         }
                     } catch (Exception e) {
                         if (!ringThreadToStop) {
-                            logger.error(">>>>>>>>>>> xxl-job, JobScheduleHelper#ringThread error:{}", e);
                         }
                     }
                 }
-                logger.info(">>>>>>>>>>> xxl-job, JobScheduleHelper#ringThread stop");
             }
         });
         ringThread.setDaemon(true);
@@ -93,9 +91,9 @@ private void pushTimeRing(int ringSecond, int jobId) {
     }
 ```
 
-
-
 #### 2. 快慢两个执行线程池
+
+
 
 #### 3. 轻量级设计
 
@@ -105,5 +103,6 @@ private void pushTimeRing(int ringSecond, int jobId) {
 
 ### 框架缺点
 
-1. 多端口问题，[参考](https://huaweicloud.csdn.net/63311521d3efff3090b51aff.html?spm=1001.2101.3001.6661.1&utm_medium=distribute.pc_relevant_t0.none-task-blog-2%7Edefault%7ECTRLIST%7Eactivity-1-116640829-blog-125324364.pc_relevant_multi_platform_whitelistv4&depth_1-utm_source=distribute.pc_relevant_t0.none-task-blog-2%7Edefault%7ECTRLIST%7Eactivity-1-116640829-blog-125324364.pc_relevant_multi_platform_whitelistv4&utm_relevant_index=1)
+1. 通过获取 DB锁来保证集群中执行任务的唯一性，调度中心数量和短任务数量都很多时，性能不高
+2. 多端口问题，[参考](https://huaweicloud.csdn.net/63311521d3efff3090b51aff.html?spm=1001.2101.3001.6661.1&utm_medium=distribute.pc_relevant_t0.none-task-blog-2%7Edefault%7ECTRLIST%7Eactivity-1-116640829-blog-125324364.pc_relevant_multi_platform_whitelistv4&depth_1-utm_source=distribute.pc_relevant_t0.none-task-blog-2%7Edefault%7ECTRLIST%7Eactivity-1-116640829-blog-125324364.pc_relevant_multi_platform_whitelistv4&utm_relevant_index=1)
 
