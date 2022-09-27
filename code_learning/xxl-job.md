@@ -15,9 +15,9 @@ github：https://github.com/xuxueli/xxl-job
 ```
 xxl-job
 
-├─xxl-job-admin     服务端
+├─xxl-job-admin     调度中心服务端
 │ 
-├─xxl-job-core      类库
+├─xxl-job-core      核心类库，调度公共方法、客户端接入支持
 │ 
 ├─xxl-job-executor-samples  
 │        ├─xxl-job-executor-sample-frameless     普通java示例
@@ -31,6 +31,35 @@ xxl-job
 2. 其中scheduleThread不断扫描数据库，获取将来一段时间（nowTime+5秒）需要执行的Job，然后将需要执行的作业根据执行时间取模并写入到一个Map结构中，即ringData
 3. 通过函数refreshNextValidTime更新Job下一次执行的时间并写入数据库。这样就能不断的产生作业写入ringData。
 4. ringThread不断从ringData获取数据并执行作业。为了避免超时，ringTread每一次只获取两个key的数据（ringTread是按照时间的秒级对60取模，所以ringTread一共有60个可以）。如果获取一次循环时间没有到，还需要休眠，一遍保证下一次取到整秒级的key。
+
+
+
+```java
+public void init() throws Exception {
+        /**
+        * 任务触发器线程池，负责具体任务调度
+        * 分为fastTriggerPool、slowTriggerPool两个线程池
+        * 当任务数量1分钟超过10个时，加入慢线程池
+        */
+        JobTriggerPoolHelper.toStart();
+		/**
+         * 30秒执行一次,维护注册表信息， 判断在线超时时间90s
+         * 1. 删除90s未有心跳的执行器节点；jobRegistry
+         * 2. 获取所有的注册节点，更新到jobGroup(执行器)
+         */
+        JobRegistryHelper.getInstance().start();
+        // 运行事变监视器,主要失败发送邮箱,重试触发器
+        JobFailMonitorHelper.getInstance().start();
+        // 将丢失主机调度日志设置为失败
+        JobCompleteHelper.getInstance().start();
+        // 统计一些失败成功报表,删除过期日志
+        JobLogReportHelper.getInstance().start();
+        // 调度计时器
+        JobScheduleHelper.getInstance().start();
+    }
+```
+
+
 
 ### 关键技术点
 
