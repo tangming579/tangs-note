@@ -17,7 +17,7 @@ xxl-job
 
 ├─xxl-job-admin     调度中心服务端
 │ 
-├─xxl-job-core      核心类库，调度公共方法、客户端接入支持
+├─xxl-job-core      核心类库，被服务端和客户端同时引用
 │ 
 ├─xxl-job-executor-samples  
 │        ├─xxl-job-executor-sample-frameless     普通java示例
@@ -32,7 +32,7 @@ xxl-job
 3. 通过函数refreshNextValidTime更新Job下一次执行的时间并写入数据库。这样就能不断的产生作业写入ringData。
 4. ringThread不断从ringData获取数据并执行作业。为了避免超时，ringTread每一次只获取两个key的数据（ringTread是按照时间的秒级对60取模，所以ringTread一共有60个可以）。如果获取一次循环时间没有到，还需要休眠，一遍保证下一次取到整秒级的key。
 
-
+启动类：
 
 ```java
 public void init() throws Exception {
@@ -63,7 +63,114 @@ public void init() throws Exception {
 
 ### 关键技术点
 
-#### 1. 时间轮算法
+#### 1. 调度器线程
+
+当xxjob存在集群部署的时候，存在多个线程争抢查询数据库，会造成触发器重复执行。为了防止这种情况，设置手动提交查询添加写锁。在此期间其他线程访问的时候都会阻塞等待。
+
+```java
+public void start() {
+scheduleThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    //每整5s执行一次
+                    TimeUnit.MILLISECONDS.sleep(5000 - System.currentTimeMillis() % 1000);
+                } catch (InterruptedException e) {
+                    if (!scheduleThreadToStop) {
+                        logger.error(e.getMessage(), e);
+                    }
+                }
+                // pre-read count: treadpool-size * trigger-qps (each trigger cost 50ms, qps = 1000/50 = 20)
+                int preReadCount = (XxlJobAdminConfig.getAdminConfig().getTriggerPoolFastMax() + XxlJobAdminConfig.getAdminConfig().getTriggerPoolSlowMax()) * 20;
+
+                while (!scheduleThreadToStop) {
+                    long start = System.currentTimeMillis();
+                    Connection conn = null;
+                    Boolean connAutoCommit = null;
+                    PreparedStatement preparedStatement = null;
+
+                    boolean preReadSuc = true;
+                    try {
+                        conn = XxlJobAdminConfig.getAdminConfig().getDataSource().getConnection();
+                        connAutoCommit = conn.getAutoCommit();
+                        // 设置手动提交
+                        conn.setAutoCommit(false);
+						// 获取任务调度锁表中数据，加写锁
+                        preparedStatement = conn.prepareStatement("select * from xxl_job_lock where lock_name = 'schedule_lock' for update");
+                        preparedStatement.execute();
+……
+
+                    } catch (Exception e) {
+                        if (!scheduleThreadToStop) {
+                            logger.error(">>>>>>>>>>> xxl-job, JobScheduleHelper#scheduleThread error:{}", e);
+                        }
+                    } finally {
+
+                        // commit
+                        if (conn != null) {
+                            try {
+                                conn.commit();
+                            } catch (SQLException e) {
+                                if (!scheduleThreadToStop) {
+                                    logger.error(e.getMessage(), e);
+                                }
+                            }
+                            try {
+                                conn.setAutoCommit(connAutoCommit);
+                            } catch (SQLException e) {
+                                if (!scheduleThreadToStop) {
+                                    logger.error(e.getMessage(), e);
+                                }
+                            }
+                            try {
+                                conn.close();
+                            } catch (SQLException e) {
+                                if (!scheduleThreadToStop) {
+                                    logger.error(e.getMessage(), e);
+                                }
+                            }
+                        }
+
+                        // close PreparedStatement
+                        if (null != preparedStatement) {
+                            try {
+                                preparedStatement.close();
+                            } catch (SQLException e) {
+                                if (!scheduleThreadToStop) {
+                                    logger.error(e.getMessage(), e);
+                                }
+                            }
+                        }
+                    }
+                    long cost = System.currentTimeMillis() - start;
+
+
+                    // Wait seconds, align second
+                    if (cost < 1000) {  // scan-overtime, not wait
+                        try {
+                            // pre-read period: success > scan each second; fail > skip this period;
+                            TimeUnit.MILLISECONDS.sleep((preReadSuc ? 1000 : PRE_READ_MS) - System.currentTimeMillis() % 1000);
+                        } catch (InterruptedException e) {
+                            if (!scheduleThreadToStop) {
+                                logger.error(e.getMessage(), e);
+                            }
+                        }
+                    }
+
+                }
+            }
+        });
+        scheduleThread.setDaemon(true);
+        scheduleThread.setName("xxl-job, admin JobScheduleHelper#scheduleThread");
+        scheduleThread.start();
+}
+```
+
+#### 2. 时间轮算法
+
+概念：时间轮出自Netty中的HashedWheelTimer，是一个环形结构，可以用时钟来类比，钟面上有很多bucket，每一个bucket上可以存放多个任务，使用一个List保存该时刻到期的所有任务，同时一个指针随着时间流逝一格一格转动，并执行对应bucket上所有到期的任务。任务通过取模决定应该放入哪个bucket。和HashMap的原理类似，newTask对应put，使用List来解决 Hash 冲突。
+
+xxl-job中的时间轮本质就是一个`concurrentHashMap`，key为执行的秒，value为要执行的job的id集合，`scheduleThread`线程会提前5秒将任务放入时间轮的list。时间轮线程每1秒执行一次，从时间轮从获取到jobIdList，最后进行调度任务；
 
 ```java
 private volatile static Map<Integer, List<Integer>> ringData = new ConcurrentHashMap<>();
@@ -120,17 +227,19 @@ private void pushTimeRing(int ringSecond, int jobId) {
     }
 ```
 
-#### 2. 快慢两个执行线程池
+#### 3. 快慢两个执行线程池
 
 ```java
 private volatile long minTim = System.currentTimeMillis() / 60000;  
 private volatile ConcurrentMap<Integer, AtomicInteger> jobTimeoutCountMap = new ConcurrentHashMap<>();
 
 public void start() {
+    //最大200线程，最多处理1000任务
     fastTriggerPool = new ThreadPoolExecutor(10, 200, 60L, TimeUnit.SECONDS,
             new LinkedBlockingQueue<Runnable>(1000),
             ……                                
             );
+    //最大100线程，最多处理2000任务
     slowTriggerPool = new ThreadPoolExecutor(10, 100, 60L, TimeUnit.SECONDS,
             new LinkedBlockingQueue<Runnable>(2000),
             ……                                 
@@ -143,7 +252,7 @@ public void addTrigger(final int jobId, final TriggerTypeEnum triggerType,
                            final String executorParam,
                            final String addressList) {
 
-        // 当任务数量1分钟超过10个时，加入慢线程池
+        // 当任务1分钟超时超过10次时，加入慢线程池
         ThreadPoolExecutor triggerPool_ = fastTriggerPool;
         AtomicInteger jobTimeoutCount = jobTimeoutCountMap.get(jobId);
         if (jobTimeoutCount != null && jobTimeoutCount.get() > 10) {      // job-timeout 10 times in 1 min
@@ -189,18 +298,12 @@ public void addTrigger(final int jobId, final TriggerTypeEnum triggerType,
     }                
 ```
 
-
-
-#### 3. 调度器线程
-
-
-
 #### 4. 路由策略
 
 #### 5. 注册中心
 
 ### 框架缺点
 
-1. 通过获取 DB锁来保证集群中执行任务的唯一性，调度中心数量和短任务数量都很多时，性能不高
+1. 通过获取 DB锁来保证集群中执行任务的唯一性，当调度中心数量和短任务数量都很多时，性能不高
 2. 多端口问题，[参考](https://huaweicloud.csdn.net/63311521d3efff3090b51aff.html?spm=1001.2101.3001.6661.1&utm_medium=distribute.pc_relevant_t0.none-task-blog-2%7Edefault%7ECTRLIST%7Eactivity-1-116640829-blog-125324364.pc_relevant_multi_platform_whitelistv4&depth_1-utm_source=distribute.pc_relevant_t0.none-task-blog-2%7Edefault%7ECTRLIST%7Eactivity-1-116640829-blog-125324364.pc_relevant_multi_platform_whitelistv4&utm_relevant_index=1)
 
