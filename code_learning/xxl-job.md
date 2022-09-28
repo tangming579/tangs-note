@@ -122,9 +122,78 @@ private void pushTimeRing(int ringSecond, int jobId) {
 
 #### 2. 快慢两个执行线程池
 
+```java
+private volatile long minTim = System.currentTimeMillis() / 60000;  
+private volatile ConcurrentMap<Integer, AtomicInteger> jobTimeoutCountMap = new ConcurrentHashMap<>();
+
+public void start() {
+    fastTriggerPool = new ThreadPoolExecutor(10, 200, 60L, TimeUnit.SECONDS,
+            new LinkedBlockingQueue<Runnable>(1000),
+            ……                                
+            );
+    slowTriggerPool = new ThreadPoolExecutor(10, 100, 60L, TimeUnit.SECONDS,
+            new LinkedBlockingQueue<Runnable>(2000),
+            ……                                 
+            );
+}
+                
+public void addTrigger(final int jobId, final TriggerTypeEnum triggerType,
+                           final int failRetryCount,
+                           final String executorShardingParam,
+                           final String executorParam,
+                           final String addressList) {
+
+        // 当任务数量1分钟超过10个时，加入慢线程池
+        ThreadPoolExecutor triggerPool_ = fastTriggerPool;
+        AtomicInteger jobTimeoutCount = jobTimeoutCountMap.get(jobId);
+        if (jobTimeoutCount != null && jobTimeoutCount.get() > 10) {      // job-timeout 10 times in 1 min
+            triggerPool_ = slowTriggerPool;
+        }
+        // trigger
+        triggerPool_.execute(new Runnable() {
+            @Override
+            public void run() {
+                long start = System.currentTimeMillis();
+                try {
+                    /**
+                    /* 触发任务
+                    /* 1.从数据库中获取任务和触发器详细信息
+                    /* 2.根据addressList拼接执行器地址列表
+                    /* 3.遍历执行器地址，使用Post方式将任务发给执行器，并记录日志
+                    */
+                    XxlJobTrigger.trigger(jobId, triggerType, failRetryCount, executorShardingParam, executorParam, addressList);
+                } catch (Exception e) {
+                    logger.error(e.getMessage(), e);
+                } finally {
+
+                    // 每分钟执行一次，清理超时map
+                    long minTim_now = System.currentTimeMillis() / 60000;
+                    if (minTim != minTim_now) {
+                        minTim = minTim_now;
+                        jobTimeoutCountMap.clear();
+                    }
+
+                    // 执行时间超过500ms，加入超时map
+                    long cost = System.currentTimeMillis() - start;
+                    if (cost > 500) {  
+                        AtomicInteger timeoutCount = jobTimeoutCountMap.putIfAbsent(jobId, new AtomicInteger(1));
+                        if (timeoutCount != null) {
+                            timeoutCount.incrementAndGet();
+                        }
+                    }
+
+                }
+
+            }
+        });
+    }                
+```
 
 
-#### 3. 轻量级设计
+
+#### 3. 调度器线程
+
+
 
 #### 4. 路由策略
 
