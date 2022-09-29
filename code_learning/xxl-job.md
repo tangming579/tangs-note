@@ -66,6 +66,11 @@ public void init() throws Exception {
 
 #### 1. 调度器线程
 
+1. 每5整秒执行一次，通过写锁锁定xxl_job_lock表，这样只有一个调度中心会执行任务；
+2. 根据两个执行线程池最大可处理任务数，从数据库xxl_job_info表中读取未来5s可执行任务列表（trigger_next_time）
+3. 根据任务执行具体秒及相应策略，立即执行任务或将任务放到时间轮中
+4. 更新任务执行时间和上次执行时间到数据库
+
 当xxjob存在集群部署的时候，存在多个线程争抢查询数据库，会造成触发器重复执行。为了防止这种情况，设置手动提交查询添加写锁。在此期间其他线程访问的时候都会阻塞等待。
 
 ```java
@@ -74,7 +79,8 @@ scheduleThread = new Thread(new Runnable() {
             @Override
             public void run() {
                 try {
-                    //每整5s执行一次
+                    //为什么不直接TimeUnit.MILLISECONDS.sleep(5000)？
+                    //保证多个调度中心同时执行时，sleep的时间点一致（都在整秒时执行）
                     TimeUnit.MILLISECONDS.sleep(5000 - System.currentTimeMillis() % 1000);
                 } catch (InterruptedException e) {
                     if (!scheduleThreadToStop) {
@@ -82,6 +88,7 @@ scheduleThread = new Thread(new Runnable() {
                     }
                 }
                 // pre-read count: treadpool-size * trigger-qps (each trigger cost 50ms, qps = 1000/50 = 20)
+                // 两个执行线程池最大可处理任务数
                 int preReadCount = (XxlJobAdminConfig.getAdminConfig().getTriggerPoolFastMax() + XxlJobAdminConfig.getAdminConfig().getTriggerPoolSlowMax()) * 20;
 
                 while (!scheduleThreadToStop) {
@@ -99,15 +106,83 @@ scheduleThread = new Thread(new Runnable() {
 						// 获取任务调度锁表中数据，加写锁
                         preparedStatement = conn.prepareStatement("select * from xxl_job_lock where lock_name = 'schedule_lock' for update");
                         preparedStatement.execute();
-……
+                    	long start = System.currentTimeMillis();
+
+                    	Connection conn = null;
+                    	Boolean connAutoCommit = null;
+                    	PreparedStatement preparedStatement = null;
+
+                        long nowTime = System.currentTimeMillis();
+                        // 1、从数据库中获取当前时间后5秒,同时最多可负载的任务列表
+                        List<XxlJobInfo> scheduleList = XxlJobAdminConfig.getAdminConfig().getXxlJobInfoDao().scheduleJobQuery(nowTime + PRE_READ_MS, preReadCount);
+                        if (scheduleList != null && scheduleList.size() > 0) {
+                            // 2、将数据推送到时间轮中
+                            for (XxlJobInfo jobInfo : scheduleList) {
+                                // 触发器过期时间>5s
+                                if (nowTime > jobInfo.getTriggerNextTime() + PRE_READ_MS) {
+                                    // 1、misfire match
+                                    MisfireStrategyEnum misfireStrategyEnum = MisfireStrategyEnum.match(jobInfo.getMisfireStrategy(), MisfireStrategyEnum.DO_NOTHING);
+                                    if (MisfireStrategyEnum.FIRE_ONCE_NOW == misfireStrategyEnum) {
+                                        // FIRE_ONCE_NOW 》 trigger
+                                        JobTriggerPoolHelper.trigger(jobInfo.getId(), TriggerTypeEnum.MISFIRE, -1, null, null, null);
+                                    }
+
+                                    // 2、更新数据库xxl_job_info表中任务的下次执行时间
+                                    refreshNextValidTime(jobInfo, new Date());
+
+                                } else if (nowTime > jobInfo.getTriggerNextTime()) {
+                                    // 2.2、trigger-expire < 5s：direct-trigger && make next-trigger-time
+
+                                    // 1、trigger
+                                    JobTriggerPoolHelper.trigger(jobInfo.getId(), TriggerTypeEnum.CRON, -1, null, null, null);
+                                    // 2、fresh next
+                                    refreshNextValidTime(jobInfo, new Date());
+
+                                    // next-trigger-time in 5s, pre-read again
+                                    if (jobInfo.getTriggerStatus() == 1 && nowTime + PRE_READ_MS > jobInfo.getTriggerNextTime()) {
+
+                                        // 1、make ring second
+                                        int ringSecond = (int) ((jobInfo.getTriggerNextTime() / 1000) % 60);
+
+                                        // 2、push time ring
+                                        pushTimeRing(ringSecond, jobInfo.getId());
+
+                                        // 3、fresh next
+                                        refreshNextValidTime(jobInfo, new Date(jobInfo.getTriggerNextTime()));
+
+                                    }
+
+                                } else {
+                                    // 2.3、trigger-pre-read：time-ring trigger && make next-trigger-time
+
+                                    // 1、make ring second
+                                    int ringSecond = (int) ((jobInfo.getTriggerNextTime() / 1000) % 60);
+
+                                    // 2、push time ring
+                                    pushTimeRing(ringSecond, jobInfo.getId());
+
+                                    // 3、fresh next
+                                    refreshNextValidTime(jobInfo, new Date(jobInfo.getTriggerNextTime()));
+
+                                }
+
+                            }
+
+                            // 3、update trigger info
+                            for (XxlJobInfo jobInfo : scheduleList) {
+                                XxlJobAdminConfig.getAdminConfig().getXxlJobInfoDao().scheduleUpdate(jobInfo);
+                            }
+
+                        } else {
+                            preReadSuc = false;
+                        }
 
                     } catch (Exception e) {
                         if (!scheduleThreadToStop) {
-                            logger.error(">>>>>>>>>>> xxl-job, JobScheduleHelper#scheduleThread error:{}", e);
+                            logger.error(">>>>>>> xxl-job, JobScheduleHelper#scheduleThread error:{}", e);
                         }
                     } finally {
-
-                        // commit
+                        // 所有工作都处理完，再提交
                         if (conn != null) {
                             try {
                                 conn.commit();
@@ -182,8 +257,7 @@ public void start() {
 		public void run() {
 			while (!ringThreadToStop) {
 				try {
-                    	//为什么不直接TimeUnit.MILLISECONDS.sleep(1000)？
-                    	//保证多个调度中心同时执行时，sleep的时间点一致（都在整秒时执行）
+                    	// 每整秒触发一次
                         TimeUnit.MILLISECONDS.sleep(1000 - System.currentTimeMillis() % 1000);
                     } catch (InterruptedException e) {
                         if (!ringThreadToStop) {
