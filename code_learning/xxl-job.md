@@ -1,4 +1,4 @@
-### 概要
+### 1. 概要
 
 github：https://github.com/xuxueli/xxl-job
 
@@ -10,7 +10,7 @@ github：https://github.com/xuxueli/xxl-job
 2. 多节点部署时，如何保证只有一个执行
 3. 服务器与集成的客户端通信机制
 
-### 项目结构
+### 2. 项目结构
 
 ```
 xxl-job
@@ -25,13 +25,13 @@ xxl-job
 
 ```
 
-### 总体设计思路
+### 3. 总体设计思路
 
-1. 由注册模块接收用户的作业信息并写入到数据库中，然后服务端启动两个线程scheduleThread、ringThread来触发任务
-2. 其中scheduleThread不断扫描数据库，获取将来一段时间（nowTime+5秒）需要执行的Job，然后将需要执行的作业根据执行时间取模并写入到一个Map结构中，即ringData
-3. 通过函数refreshNextValidTime更新Job下一次执行的时间并写入数据库。这样就能不断的产生作业写入ringData。
-4. ringThread不断从ringData获取数据并执行作业。为了避免超时，ringTread每一次只获取两个key的数据（ringTread是按照时间的秒级对60取模，所以ringTread一共有60个可以）。如果获取一次循环时间没有到，还需要休眠，一遍保证下一次取到整秒级的key。
-5. 调度器将扫描线程和执行线程隔离，因为扫描线程需要和数据库交互，且使用了排他锁，性能较慢。执行线程不与中间件交互，直接扫描时间轮，性能较高，可保证任务精准触发。
+- 注册模块接收用户的作业信息并写入到数据库中，然后服务端启动两个线程scheduleThread、ringThread来触发任务
+- 其中scheduleThread不断扫描数据库，获取将来一段时间（nowTime+5秒）需要执行的Job，然后将需要执行的作业根据执行时间取模并写入到一个Map结构中，即ringData
+- 通过函数refreshNextValidTime更新Job下一次执行的时间并写入数据库。这样就能不断的产生作业写入ringData。
+- ringThread不断从ringData获取数据并执行作业。为了避免超时，ringTread每一次只获取两个key的数据（ringTread是按照时间的秒级对60取模，所以ringTread一共有60个可以）。如果获取一次循环时间没有到，还需要休眠，一遍保证下一次取到整秒级的key。
+- 调度器将扫描线程和执行线程隔离，因为扫描线程需要和数据库交互，且使用了排他锁，性能较慢。执行线程不与中间件交互，直接扫描时间轮，性能较高，可保证任务精准触发。
 
 启动类：
 
@@ -62,14 +62,17 @@ public void init() throws Exception {
 
 
 
-### 关键技术点
+### 4. 关键技术点
 
 #### 1. 调度器线程
 
-1. 每5整秒执行一次，通过写锁锁定xxl_job_lock表，这样只有一个调度中心会执行任务；
-2. 根据两个执行线程池最大可处理任务数，从数据库xxl_job_info表中读取未来5s可执行任务列表（trigger_next_time）
-3. 根据任务执行具体秒及相应策略，立即将任务放到执行线程中或将任务放到时间轮中
-4. 更新数据库中任务执行时间和上次执行时间
+- 每5整秒执行一次，通过写锁锁定xxl_job_lock表，这样只有一个调度中心会执行任务；
+
+- 根据两个执行线程池最大可处理任务数，从数据库xxl_job_info表中读取未来5s可执行任务列表（trigger_next_time）
+
+- 根据任务执行具体秒及相应策略，立即将任务放到执行线程中或将任务放到时间轮中
+
+- 更新数据库中任务执行时间和上次执行时间
 
 当xxjob存在集群部署的时候，存在多个线程争抢查询数据库，会造成触发器重复执行。为了防止这种情况，设置手动提交查询添加写锁。在此期间其他线程访问的时候都会阻塞等待。
 
@@ -380,5 +383,5 @@ public void addTrigger(final int jobId, final TriggerTypeEnum triggerType,
 ### 框架缺点
 
 1. 通过获取 DB锁来保证集群中执行任务的唯一性，当调度中心数量和短任务数量都很多时，性能不高
-2. 多端口问题，[参考](https://huaweicloud.csdn.net/63311521d3efff3090b51aff.html?spm=1001.2101.3001.6661.1&utm_medium=distribute.pc_relevant_t0.none-task-blog-2%7Edefault%7ECTRLIST%7Eactivity-1-116640829-blog-125324364.pc_relevant_multi_platform_whitelistv4&depth_1-utm_source=distribute.pc_relevant_t0.none-task-blog-2%7Edefault%7ECTRLIST%7Eactivity-1-116640829-blog-125324364.pc_relevant_multi_platform_whitelistv4&utm_relevant_index=1)
+2. 多端口问题：客户端为了和调度中心通信，需要单独给定一个端口，其实如果是spring项目，完全可以像consul一样共享接口端口
 
