@@ -4,6 +4,35 @@ git log --pretty=short --oneline
 
 
 
+
+
+```
+git remote add upstream https://gitlab.dev.21vianet.com/sbg2-tenxcloud/tdsf/service-mesh.git
+
+每次请求合并前：
+git fetch upstream main
+git merge upstream/main
+
+git config --global user.name "tangming"
+git config --global user.email  "tang.ming@sina.com"
+
+Rebase操作：
+git rebase -i b3f8169
+git rebase --continue
+git push -f
+
+git rebase --interactive HEAD~2
+
+回滚：
+git reset --hard  66b9f9481b45b562a1949898504f74e3695a
+git push -f
+
+终止rebase：git rebase --abort
+修改提交信息：git commit --amend
+```
+
+
+
 ### git reabase
 
 ```
