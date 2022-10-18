@@ -1,5 +1,13 @@
 ### 命令大全
 
+```
+journalctl -n 15 --- 显示尾部指定行数的日志
+journalctl -f --- 实时滚动显示最新日志
+journalctl -u nginx.service --- 查看某个 Unit 的日志
+journalctl --since 07:30 --until "2 hour ago"
+
+```
+
 
 
 ### 快捷键篇
