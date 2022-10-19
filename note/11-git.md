@@ -22,6 +22,14 @@ git merge upstream/main
 git config --global user.name "tangming"
 git config --global user.email  "tang.ming@sina.com"
 
+修改提交信息：
+1. git commit --amend   
+2. git commit --amend -m "填写提交的注释"
+```
+
+### git reset
+
+```
 回滚：
 1. git reset --mixed
 	只保留工作区的修改，暂存区的差异，会被全部放到工作区中，等同于不带任何参数的git reset
@@ -33,12 +41,7 @@ git config --global user.email  "tang.ming@sina.com"
 git reset HEAD^            # 回退所有内容到上一个版本  
 git reset HEAD^ hello.php  # 回退 hello.php 文件的版本到上一个版本  
 git reset  052e            # 回退到指定版本
-
-
-修改提交信息：git commit --amend
 ```
-
-
 
 ### git reabase
 

@@ -1,11 +1,21 @@
 ### 命令大全
 
+#### journalctl
+
 ```
 journalctl -n 15 --- 显示尾部指定行数的日志
 journalctl -f --- 实时滚动显示最新日志
 journalctl -u nginx.service --- 查看某个 Unit 的日志
 journalctl --since 07:30 --until "2 hour ago"
 
+```
+
+find
+
+```
+find /home -name *.log  --- 查找home路径下 .log文件
+find . -size +100M --- 查找当前路径大于100M文件, +代表大于 -代表小于 等于无前缀
+find / -iname k8s.yaml --- 不区分大小写全局查找文件
 ```
 
 
