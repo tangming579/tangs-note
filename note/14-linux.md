@@ -1,5 +1,51 @@
 ### 命令大全
 
+#### 文件管理
+
+**file**：用来探测给定文件的类型
+
+```
+file install.log  ---> install.log: UTF-8 Unicode text
+```
+
+**find**：在磁盘中检索所有类型文件，效率比较低
+
+```
+find /home -name *.log  --- 查找home路径下 .log文件
+find . -size +100M --- 查找当前路径大于100M文件, +代表大于 -代表小于 等于无前缀
+find / -iname k8s.yaml --- 不区分大小写全局查找文件
+```
+
+**which**：在环境变量$PATH设置的目录里查找可执行文件位置
+
+```
+which java  ---> /usr/bin/java
+```
+
+**whereis**：数据库中搜索二进制程序名
+
+```
+whereis java  ---> java: /usr/bin/java /usr/share/man/man1/java.1
+```
+
+**locate**：类似whereis，根据每天更新的数据库（/var/lib/mlocate）查找，速度快
+
+```
+locate mysql
+```
+
+
+
+#### 磁盘管理
+
+#### 文本处理
+
+#### 网络通讯
+
+#### 系统设置
+
+#### 系统管理
+
 #### journalctl
 
 ```
