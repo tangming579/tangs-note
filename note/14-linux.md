@@ -1,11 +1,30 @@
 ### 命令大全
 
+#### journalctl
+
 ```
 journalctl -n 15 --- 显示尾部指定行数的日志
 journalctl -f --- 实时滚动显示最新日志
 journalctl -u nginx.service --- 查看某个 Unit 的日志
 journalctl --since 07:30 --until "2 hour ago"
 
+```
+
+#### find
+
+```
+#在磁盘中检索所有类型文件，效率比较低
+find /home -name *.log  --- 查找home路径下 .log文件
+find . -size +100M --- 查找当前路径大于100M文件, +代表大于 -代表小于 等于无前缀
+find / -iname k8s.yaml --- 不区分大小写全局查找文件
+
+#在环境变量$PATH设置的目录里查找运行中的文件
+which java
+->/usr/bin/java
+
+#在数据库索引中查找软件的安装目录
+whereis java
+->java: /usr/bin/java /usr/share/man/man1/java.1
 ```
 
 
