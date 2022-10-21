@@ -34,6 +34,29 @@ whereis java  ---> java: /usr/bin/java /usr/share/man/man1/java.1
 locate mysql
 ```
 
+**mv**：对文件或目录重新命名，或者将文件从一个目录移到另一个目录中
+
+```
+mv -v *.txt /home/office  -- 打印移动日志
+mv -uv *.txt /home/office --- 源文件比目标文件新时才执行更新
+mv -vn *.txt /home/office --- 不要覆盖任何已存在的文件
+mv -bv *.txt /home/office --- 复制时创建备份
+```
+
+**rm**：删除给定的文件和目录
+
+```
+rm -rf *.html  --- 删除当前项目下 .html 结尾的文件
+rm -rf icons/**/data --- 批量删除 icons 文件夹中的子文件夹中的 data 文件夹
+find ./docs -name "*.html" -exec rm -rf {} \; --- 查找 .html 结尾的文件并删除
+```
+
+ **split**：分割任意大小的文件
+
+```
+split -b 10k date.file -d -a 3 split_file --- 分割成大小为10KB的小文件，指定后缀长度
+```
+
 
 
 #### 磁盘管理
