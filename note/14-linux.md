@@ -61,6 +61,27 @@ split -b 10k date.file -d -a 3 split_file --- 分割成大小为10KB的小文件
 
 #### 磁盘管理
 
+ **df**：文件系统磁盘使用情况统计(disk free)
+
+```
+df -h
+--- >
+Filesystem            Size  Used Avail Use% Mounted on
+C:/Program Files/Git  201G  128G   73G  64% /
+D:                    101G   32G   70G  32% /d
+E:                    174G   12G  162G   7% /e
+```
+
+**du**：文件或目录大小(disk usage)
+
+```
+du -h /home/note
+--- >
+221K    note
+```
+
+
+
 #### 文本处理
 
 #### 网络通讯
