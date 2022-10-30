@@ -2,13 +2,17 @@
 
 #### 文件管理
 
-**file**：用来探测给定文件的类型
+##### **file**
+
+用来探测给定文件的类型
 
 ```
 file install.log  ---> install.log: UTF-8 Unicode text
 ```
 
-**find**：在磁盘中检索所有类型文件，效率比较低
+##### **find**
+
+在磁盘中检索所有类型文件，效率比较低
 
 ```
 find /home -name *.log  --- 查找home路径下 .log文件
@@ -231,6 +235,12 @@ top -n 10  --- 显示更新十次后退出
 
 #### 文本处理
 
+**awk**：文本和数据进行处理的编程语言
+
+```
+
+```
+
 **grep**：查找文件里符合条件的字符串
 
 ```
@@ -239,11 +249,49 @@ grep -v test *test*  --- 查找文件名中包含 test 的文件中不包含test
 grep -r update /etc/acpi --- 查找/etc/acpi及其子目录下所有文件中包含字符串"update"的文件，并打印出该字符串所在行的内容
 ```
 
+**wc**：统计文件的字节数、字数、行数
 
+```
+-l # 统计行数
+-m # 统计字符数
+-w # 统计字数。
+```
 
 #### 网络通讯
 
-#### journalctl
+**telnet**：登录远程主机和管理(测试ip端口是否连通)
+
+telnet因为采用明文传送报文，安全性不好，很多Linux服务器都不开放telnet服务，而改用更安全的ssh方式了
+
+```
+telnet 118.10.6.128 88  --- 测试端口是否打开
+```
+
+**ip**：网络配置工具
+
+```
+
+```
+
+**ifconfig**：配置和显示Linux系统网卡的网络参数
+
+```
+ifconfig eth0 up/down  --- 开启关闭指定网卡
+ifconfig eth0 down
+```
+
+**netstat**：查看Linux中网络系统状态信息
+
+```
+-n或--numeric：直接使用ip地址，而不通过域名服务器；
+-t或--tcp：显示TCP传输协议的连线状况；
+-l或--listening 显示监控中的服务器的Socket。
+-p或--programs：显示正在使用Socket的程序识别码和程序名称；
+```
+
+#### 其他
+
+##### **journalctl**
 
 ```
 journalctl -n 15 --- 显示尾部指定行数的日志
