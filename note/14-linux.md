@@ -2,7 +2,7 @@
 
 #### 文件管理
 
-##### **file**
+##### file
 
 用来探测给定文件的类型
 
@@ -10,7 +10,7 @@
 file install.log  ---> install.log: UTF-8 Unicode text
 ```
 
-##### **find**
+##### find
 
 在磁盘中检索所有类型文件，效率比较低
 
@@ -20,7 +20,7 @@ find . -size +100M --- 查找当前路径大于100M文件, +代表大于 -代表
 find / -iname k8s.yaml --- 不区分大小写全局查找文件
 ```
 
-##### **which**
+##### which
 
 在环境变量$PATH设置的目录里查找可执行文件位置
 
@@ -28,7 +28,7 @@ find / -iname k8s.yaml --- 不区分大小写全局查找文件
 which java  ---> /usr/bin/java
 ```
 
-##### **whereis**
+##### whereis
 
 数据库中搜索二进制程序名
 
@@ -36,7 +36,7 @@ which java  ---> /usr/bin/java
 whereis java  ---> java: /usr/bin/java /usr/share/man/man1/java.1
 ```
 
-##### **locate**
+##### locate
 
 类似whereis，根据每天更新的数据库（/var/lib/mlocate）查找，速度快
 
@@ -44,7 +44,7 @@ whereis java  ---> java: /usr/bin/java /usr/share/man/man1/java.1
 locate mysql
 ```
 
-##### **mv**
+##### mv（move file）
 
 对文件或目录重新命名，或者将文件从一个目录移到另一个目录中
 
@@ -55,7 +55,7 @@ mv -vn *.txt /home/office --- 不要覆盖任何已存在的文件
 mv -bv *.txt /home/office --- 复制时创建备份
 ```
 
-##### **rm**
+##### rm（remove）
 
 删除给定的文件和目录
 
@@ -73,24 +73,24 @@ find ./docs -name "*.html" -exec rm -rf {} \; --- 查找 .html 结尾的文件�
 split -b 10k date.file -d -a 3 split_file --- 分割成大小为10KB的小文件，指定后缀长度
 ```
 
-##### **cat**
+##### cat（concatenate）
 
 一次性在终端中显示文件的所有内容
 
-##### **less**
+##### more
 
-分页显示文件内容，less命令会分一页一页地显示文件内容，cat会一次性全部显示
-
-##### **more**
-
-和less命令相似，但没有less命令强大，不能往后翻页，只能一路往前翻页
+不能往后翻页，只能一路往前翻页
 
 ```
 cat -n demo.txt --- 由 1 开始对所有输出的行数进行编号
 ps -ef |less --- ps查看进程信息并通过less分页显示
 ```
 
-##### **chmod**
+##### less
+
+more的升级版，分页显示文件内容，less命令会分一页一页地显示文件内容，cat会一次性全部显示
+
+##### chmod（change mode）
 
 用来变更文件或目录的权限
 
@@ -112,7 +112,7 @@ chmod ugo+r file1.txt --- 将文件 file1.txt 设为所有人皆可读取
 chmod -R a+r * --- 将目前目录下的所有文件与子目录皆设为任何人可读取
 ```
 
-##### **chown**
+##### chown（change owner）
 
 变更文件或目录的拥有者或所属群组
 
@@ -122,9 +122,9 @@ chown -R tang /usr/demo  --- 将目录/usr/demo 及其下面的所有文件、�
 
 #### 磁盘管理
 
-#####  **df**
+#####  df（disk free）
 
-文件系统磁盘使用情况统计(disk free)
+文件系统磁盘使用情况统计
 
 ```
 df -h
@@ -135,9 +135,9 @@ D:                    101G   32G   70G  32% /d
 E:                    174G   12G  162G   7% /e
 ```
 
-##### **du**
+##### du（disk usage）
 
-文件或目录大小(disk usage)
+文件或目录大小
 
 ```
 du -h /home/note
@@ -145,7 +145,7 @@ du -h /home/note
 221K    note
 ```
 
-##### **ls**
+##### ls（list）
 
 显示指定工作目录下之内容
 
@@ -153,7 +153,7 @@ du -h /home/note
 ls -laR /bin --- 递归显示/bin下所有文件及目录 (. 开头的隐藏文件也会列出)包括详细信息
 ```
 
-##### **mkdir**
+##### mkdir（make directory）
 
 创建目录
 
@@ -161,9 +161,17 @@ ls -laR /bin --- 递归显示/bin下所有文件及目录 (. 开头的隐藏文�
 mkdir -p runoob2/test --- 确保目录名称存在，不存在的就建一个。
 ```
 
+##### stat（统计）
+
+显示文件的状态信息，比 ls 更详细
+
+```
+stat myfile
+```
+
 #### 系统设置
 
-##### **env**
+##### env
 
 显示系统中已存在的环境变量
 
@@ -171,7 +179,7 @@ mkdir -p runoob2/test --- 确保目录名称存在，不存在的就建一个。
 env | grep mylove  --- 显示环境变量值
 ```
 
-##### **alias**
+##### alias
 
 定义或显示别名
 
@@ -181,7 +189,7 @@ alias ls  --- 列出单个已定义的别名
 alias ls='ls --color=auto'  --- 设置别名
 ```
 
-##### **crontab**
+##### crontab
 
 定期执行程序
 
@@ -197,7 +205,7 @@ crontab -r: 删除当前用户的定时任务列表
 系统周期性所要执行的工作
 ```
 
-##### **export**
+##### export
 
 设置或显示环境变量
 
@@ -210,7 +218,7 @@ crontab -r: 删除当前用户的定时任务列表
  source /etc/profile
 ```
 
-##### **rpm**
+##### rpm
 
 RPM软件包的管理工具
 
@@ -224,7 +232,7 @@ rpm -qa | grep sql  --- 已安装软件包中查找包含sql的包
 
 #### 系统管理
 
-##### **free**
+##### free
 
 显示内存的使用情况
 
@@ -232,7 +240,7 @@ rpm -qa | grep sql  --- 已安装软件包中查找包含sql的包
 free -m --- 以MB为单位显示内存使用情况
 ```
 
-##### **kill**
+##### kill
 
 删除执行中的程序或工作
 
@@ -240,9 +248,9 @@ free -m --- 以MB为单位显示内存使用情况
 kill -9 PID --- 彻底杀死进程
 ```
 
-##### **ps**
+##### ps（process status）
 
-显示当前进程的状态，类似于 windows 的任务管理器（process status）
+显示当前进程的状态，类似于 windows 的任务管理器
 
 ```
 ps aux | sort -rnk 4 # 按内存资源的使用量对进程进行排序
@@ -250,23 +258,23 @@ ps aux | sort -nk 3  # 按 CPU 资源的使用量对进程进行排序
 ps -ef # 显示所有进程信息，连同命令行
 ```
 
-##### **su**
+##### su（switch user）
 
-变更为其他使用者的身份（switch user）
+变更为其他使用者的身份
 
 ```
 su root //切换到root用户
 ```
 
-##### **sudo**
+##### sudo（super user do）
 
-以系统管理者的身份执行指令（super user do）
+以系统管理者的身份执行指令
 
 ```
 sudo -i  --- 一直执行某些只有超级用户才能执行的权限，不用每次输入密码
 ```
 
-##### **top**
+##### top
 
 显示或管理执行中的程序
 
@@ -275,25 +283,25 @@ top -p 139 --- 显示进程号为139的进程信息，CPU、内存占用率等
 top -n 10  --- 显示更新十次后退出
 ```
 
-##### **uname**
+##### uname（unix name）
 
-显示系统信息（unix name）
+显示系统信息
 
 ```
  uname -a  --- 显示全部系统信息
 ```
 
-##### **who**
+##### who
 
 显示当前登录系统的用户
 
-##### **whoami**
+##### whoami
 
 显示自身用户名称
 
 #### 文本处理
 
-##### **awk**
+##### awk
 
 文本和数据进行处理的编程语言
 
@@ -301,7 +309,15 @@ top -n 10  --- 显示更新十次后退出
 
 ```
 
-##### **grep**
+##### sed
+
+```
+
+```
+
+
+
+##### grep
 
 查找文件里符合条件的字符串
 
@@ -311,7 +327,7 @@ grep -v test *test*  --- 查找文件名中包含 test 的文件中不包含test
 grep -r update /etc/acpi --- 查找/etc/acpi及其子目录下所有文件中包含字符串"update"的文件，并打印出该字符串所在行的内容
 ```
 
-##### **wc**
+##### wc
 
 统计文件的字节数、字数、行数
 
@@ -323,7 +339,7 @@ grep -r update /etc/acpi --- 查找/etc/acpi及其子目录下所有文件中包
 
 #### 网络通讯
 
-##### **telnet**
+##### telnet
 
 登录远程主机和管理(测试ip端口是否连通)
 
@@ -333,7 +349,7 @@ telnet因为采用明文传送报文，安全性不好，很多Linux服务器都
 telnet 118.10.6.128 88  --- 测试端口是否打开
 ```
 
-##### **ip**
+##### ip
 
 网络配置工具
 
@@ -341,7 +357,7 @@ telnet 118.10.6.128 88  --- 测试端口是否打开
 
 ```
 
-##### **ifconfig**
+##### ifconfig
 
 配置和显示Linux系统网卡的网络参数
 
@@ -350,7 +366,7 @@ ifconfig eth0 up/down  --- 开启关闭指定网卡
 ifconfig eth0 down
 ```
 
-##### **netstat**
+##### netstat
 
 查看Linux中网络系统状态信息
 
@@ -363,7 +379,36 @@ ifconfig eth0 down
 
 #### 其他
 
-##### **journalctl**
+##### gzip
+
+压缩文件
+
+-d或--decompress或----uncompress：解开压缩文件； 
+
+-f或——force：强行压缩文件。不理会文件名称或硬连接是否存在以及该文件是否为符号连接；
+
+-r或——recursive：递归处理，将指定目录下的所有文件及子目录一并处理；
+
+-v或——verbose：显示指令执行过程；
+
+-l或——list：列出压缩文件的相关信息；
+
+```
+gzip *  --- 压缩所有文件
+gzip -dv * --- 解压
+gzip -rv test6  --- 递归压缩目录
+gzip -r log.tar  --- 压缩一个tar备份文件，此时压缩文件的扩展名为.tar.gz
+```
+
+##### tar
+
+将许多文件一起保存至一个单独的磁带或磁盘归档，并能从归档中单独还原所需文件。
+
+```
+
+```
+
+##### journalctl
 
 ```
 journalctl -n 15 --- 显示尾部指定行数的日志
