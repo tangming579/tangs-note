@@ -10,15 +10,15 @@ Ctrl + Alt + [：previous project window
 
 ### 文件跳转
 
-Ctrl + Shift + 逗号：recent file
+Ctrl + E：recent file
 
 Ctrl + Shift + E：recent locations
 
-Ctrl + Shift + 空格：last edit location
+Ctrl + Shift + Backspace：last edit location
 
-Ctrl + 减号：向前
+Ctrl + Alt + 右箭头：向前
 
-Ctrl + 加号：向后
+Ctrl + Alt + 左箭头：向后
 
 ### 打标签
 
@@ -26,9 +26,15 @@ Ctrl + Shift + 数字：打标记
 
 Ctrl + 数字：跳转至标记
 
-Alt + 2：打开Favorites窗口
-
 Ctrl + K：add to favorites list
+
+Alt + 1：Project窗口
+
+Alt + 2：Favorites窗口
+
+Alt + 4 ：Run窗口
+
+Alt + 8：Service窗口
 
 ### 搜索
 
@@ -40,11 +46,15 @@ Ctrl + Alt + Shift + N：查找函数
 
 ### 调试
 
-F9：添加断点（Ctrl + F8）
+Shift + F9：Debug 代码
 
-F10：逐过程调试（F7）
+Shift + F10：运行代码
 
-F11：逐句调试（F8）
+Ctrl + F8：添加断点
+
+F7：逐过程调试
+
+F8：逐句调试
 
 Ctrl + Shift + F8：增加条件断点
 
