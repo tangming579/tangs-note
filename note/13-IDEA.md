@@ -10,9 +10,13 @@ Ctrl + Alt + [：previous project window
 
 ### 文件跳转
 
+Ctrl + Shift + E：recent locations
+
 Ctrl + Shift + 逗号：recent file
 
-Ctrl + Shift + 空格：last edit location
+Ctrl + Shift + 退格：last edit location
+
+Ctrl + Alt + L：项目窗口
 
 Ctrl + 减号：向前
 
@@ -26,7 +30,7 @@ Ctrl + 数字：跳转至标记
 
 Alt + 2：打开Favorites窗口
 
-Ctrl + K：add to favorites list
+Ctrl + K,K：add to favorites list
 
 
 
