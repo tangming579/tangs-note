@@ -17,7 +17,7 @@ file install.log  ---> install.log: UTF-8 Unicode text
 ```
 find /home -name *.log  --- 查找home路径下 .log文件
 find . -size +100M --- 查找当前路径大于100M文件, +代表大于 -代表小于 等于无前缀
-find / -iname k8s.yaml --- 不区分大小写全局查找文件
+find / -name k8s.yaml --- 不区分大小写全局查找文件
 ```
 
 ##### which
@@ -127,6 +127,8 @@ chown -R tang /usr/demo  --- 将目录/usr/demo 及其下面的所有文件、�
 文件系统磁盘使用情况统计
 
 ```
+-h, --human-readable  以K，M，G为单位，提高信息的可读性。
+
 df -h
 --- >
 Filesystem            Size  Used Avail Use% Mounted on
@@ -228,8 +230,6 @@ rpm -e --nodeps your-package --- 卸载指定软件包（不带后缀.rpm）
 rpm -qa | grep sql  --- 已安装软件包中查找包含sql的包
 ```
 
-
-
 #### 系统管理
 
 ##### free
@@ -253,9 +253,10 @@ kill -9 PID --- 彻底杀死进程
 显示当前进程的状态，类似于 windows 的任务管理器
 
 ```
-ps aux | sort -rnk 4 # 按内存资源的使用量对进程进行排序
-ps aux | sort -nk 3  # 按 CPU 资源的使用量对进程进行排序
+ps -aux | sort -rnk 4 # 按内存资源的使用量对进程进行排序
 ps -ef # 显示所有进程信息，连同命令行
+
+这两者的输出结果差别不大，但展示风格不同。aux是BSD风格，ef是System V风格
 ```
 
 ##### su（switch user）
@@ -317,7 +318,7 @@ top -n 10  --- 显示更新十次后退出
 
 ```
 
-##### grep
+##### grep（Globally search a Regular Expression and Print）
 
 查找文件里符合条件的字符串
 
@@ -327,7 +328,7 @@ grep -v test *test*  --- 查找文件名中包含 test 的文件中不包含test
 grep -r update /etc/acpi --- 查找/etc/acpi及其子目录下所有文件中包含字符串"update"的文件，并打印出该字符串所在行的内容
 ```
 
-##### wc
+##### wc（word count）
 
 统计文件的字节数、字数、行数
 
@@ -349,15 +350,20 @@ telnet因为采用明文传送报文，安全性不好，很多Linux服务器都
 telnet 118.10.6.128 88  --- 测试端口是否打开
 ```
 
-##### ip
+##### curl（client URL）
 
-网络配置工具
-
-```
+利用URL规则在命令行下工作的文件传输工具
 
 ```
+-X         指定 HTTP 请求的方法
+-d         用于发送 POST 请求的数据体。
+-H         添加 HTTP 请求的标头。
+--cookies  用来向服务器发送 Cookie。
 
-##### ifconfig
+curl -X POST -H "Content-type: application/json" -d '{"phone":"13521389587","password":"test"}' http://192.168.100.2:8080/api/user -cookie "user=root;pass=123456"
+```
+
+##### ifconfig（network interfaces configuring）
 
 配置和显示Linux系统网卡的网络参数
 
