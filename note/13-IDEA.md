@@ -2,6 +2,8 @@ Ctrl + Shift + A：find action
 
 Ctrl + B：转到定义
 
+Ctrl + Alt + L：格式化代码
+
 ### 项目跳转
 
 Ctrl + Alt + ]：next project window
@@ -47,6 +49,8 @@ Ctrl + Alt + Shift + N：查找函数
 ### 调试
 
 Shift + F9：Debug 代码
+
+F9：恢复程序执行
 
 Shift + F10：运行代码
 
