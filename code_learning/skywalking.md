@@ -6,7 +6,7 @@ github：https://github.com/apache/skywalking
 
 ### 2. 项目结构
 
-#### OAP 服务结构
+#### 主服务结构
 
 ```
 skywalking
@@ -72,5 +72,5 @@ skywalking
 |   `-- skywalking-agent.jar
 ```
 
-### 3. 总体设计思路
+### 3. 技术点
 
