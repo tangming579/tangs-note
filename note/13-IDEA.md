@@ -30,6 +30,8 @@ Alt + 4 ：Run窗口
 
 Alt + 8：Service窗口
 
+Alt + F1：弹出选中文件对话框
+
 ### 打标签
 
 Ctrl + Shift + 数字：打标记
@@ -60,6 +62,6 @@ F7：逐过程调试
 
 F8：逐句调试
 
-Ctrl + Shift + F8：增加条件断点
+Ctrl + Shift + F8：断点管理，关闭所有断点、增加条件断点
 
 Alt + F8：表达式求值
