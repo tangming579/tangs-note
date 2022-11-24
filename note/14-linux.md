@@ -462,6 +462,21 @@ journalctl -u nginx.service --- 查看某个 Unit 的日志
 journalctl --since 07:30 --until "2 hour ago"
 ```
 
+##### yum（Yellow dog Updater, Modified）
+
+在 Fedora 和 RedHat 以及 SUSE 中的 Shell 前端 RPM软件包管理器
+
+```
+yum update  --- 更新所有软件
+yum list  --- 列出所有可安裝的软件清单
+yum list installed  --- 列出已安装的包
+yum remove <package_name>  --- 移除包
+yum search <keyword>  --- 查找包
+yum install  --downloadonly --downloaddir=路径  安装包名  --- 仅下载 rpm 包到指定路径
+```
+
+
+
 ### 快捷键篇
 
 ```
