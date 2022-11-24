@@ -56,4 +56,11 @@ docker load -i nginx.tar
 docker tag [镜像id] [新镜像名称]:[新镜像标签] 
 ```
 
+### harbor push
+
+```sh
+docker login -u ${HARBOR_USER} -p ${HARBOR_PASS} 10.15.20.115:8000
+docker tag ${IMAGEID} 10.15.20.115:8000/${HARBOR_REP}/busybox:1.0
+docker push 10.15.20.115:8000/${HARBOR_REP}/busybox:1.0
+```
 
