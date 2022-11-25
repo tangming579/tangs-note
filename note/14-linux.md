@@ -69,8 +69,11 @@ find ./docs -name "*.html" -exec rm -rf {} \; --- 查找 .html 结尾的文件�
 
 分割任意大小的文件
 
-```
+```sh
 split -b 10k date.file -d -a 3 split_file --- 分割成大小为10KB的小文件，指定后缀长度
+
+#合并文件：
+cat split_file* > date.file
 ```
 
 ##### cat（concatenate）
