@@ -98,28 +98,59 @@ Skywalking 中 Trace 的相关概念：
 
 - Segment：是skywalking独有的一个概念，在一次调用里所经历的一个线程生成一个Segment，与Trace是一对多关系。
 - Span：一个请求在某个进程/线程里的逻辑内的轨迹片段，与Segment是一对多关系，共三种类型span： 
-  - EntrySpan：入口span，http服务、rpc服务、MQ消费者
-  - LocalSpan：不与远程服务交互的span
-  - ExitSpan：出口span，各种clientSpan，比如httpclient的请求
+  - EntrySpan：入口span，当请求进入服务时创建的span，它也是segment中的第一个
+  - LocalSpan：在本地方法调用时创建的span，不与远程服务交互
+  - ExitSpan：出口span，当请求离开当前服务，进入其他服务时创建的span
 - reference：表示跨线程、进程父子关系，Reference包含上游的trace ID, segment ID, span ID, service name, service instance name, endpoint name，和客户端的目标地址 （跨线程场景中没有该字段）. reference中的这些字段是通过[Cross Process Propagation Headers Protocol v3](https://skywalking.apache.org/docs/main/next/en/protocols/skywalking-cross-process-propagation-headers-protocol-v3/) 在agent与agent之间传递的。
 
-#### Span结构
+#### Span 结构
+
+索引结构
 
 ```
-trace_id：本次调用的唯一id，通过snowflake模式生成
-endpoint_name：被调用的接口
-latency：耗时
-end_time：结束时间戳
-endpoint_id：被调用的接口的唯一id
-service_instance_id：被调用的实例的唯一id
-version：本数据结构的版本号
-start_time：开始时间戳
-data_binary：里面保存了本次调用的所有Span的数据，序列化并用Base64编码，不会进行分析和用于查询
-service_id：服务的唯一id
-time_bucket：调用所处的时段
-is_error：是否失败
-segment_id：数据本身的唯一id，类似于主键，通过snowflake模式生成
+
 ```
+
+接口返回值结构：
+
+```
+traceId：本次调用的唯一id，通过snowflake模式生成
+segmentId：数据本身的唯一id，类似于主键，和trace_id是同一个函数生成的
+spanId：跨度id，当前segment唯一
+endpointName：被调用的接口
+serviceCode：被调用的服务名
+serviceInstanceName：被调用的服务实例名
+startTime：开始时间戳
+endTime：结束时间戳
+dataBinary：里面保存了本次调用的所有Span的数据，序列化并用Base64编码，不会进行分析和用于查询
+isError：是否失败
+component：
+layer：当前span所处的位置，可选项有DB
+peer：
+tags：
+type：span类型，EntrySpan、LocalSpan、ExitSpan
+refs：关联关系
+```
+
+#### Span传递方式
+
+SkyWalking 跨进程传播协议是用于上下文的传播，8.0+的skywalking使用版本是**3.0**，也被称为为`sw8`协议
+
+Header 项：
+
+- Header名称：`sw8`.
+- Header值：由`-`分隔的8个字段组成，每个字段使用Base64编码。Header值的长度应该小于2KB。
+
+Header值中具体包含以下8个字段：
+
+- 采样（Sample），0 或 1，0 表示上下文存在, 但是可以（也很可能）被忽略；1 表示这个追踪需要采样并发送到后端。
+- 追踪ID（Trace Id），是 BASE64 编码的字符串，其内容是由 . 分割的三个 long 类型值, 表示此追踪的唯一标识。
+- 父追踪片段ID（Parent trace segment Id），是 BASE64 编码的字符串，其内容是字符串且全局唯一。
+- 父跨度ID（Parent span Id），是一个从 0 开始的整数，这个跨度ID指向父追踪片段（segment）中的父跨度（span）。
+- 父服务名称（Parent service），是 BASE64 编码的字符串，其内容是一个长度小于或等于50个UTF-8编码的字符串。
+- 父服务实例标识（Parent service instance），是 BASE64 编码的字符串，其内容是一个长度小于或等于50个UTF-8编码的字符串。
+- 父服务的端点（Parent endpoint），是 BASE64 编码的字符串，其内容是父追踪片段（segment）中第一个入口跨度（span）的操作名，由长度小于或等于50个UTF-8编码的字符组成。
+- 本请求的目标地址（Peer），是 BASE64 编码的字符串，其内容是客户端用于访问目标服务的网络地址（不一定是 IP + 端口）。
 
 #### 监测指标
 
