@@ -2,7 +2,7 @@
 
 github：https://github.com/apache/skywalking
 
-作用：分布式链路追踪系统
+作用：分布式链路最终系统
 
 ### 2. 项目结构
 
@@ -72,35 +72,5 @@ skywalking
 |   `-- skywalking-agent.jar
 ```
 
-### 4. 基本概念
+### 3. 技术点
 
-
-
-### 5. 存储结构
-
-#### APM全局指标（7个索引）
-
-#### 服务之间调用指标（8个索引）
-
-#### 服务实例之间的调用指标（11个索引）
-
-#### 端点指标（8个索引）
-
-| 索引名                        |                                      |                   |
-| ----------------------------- | ------------------------------------ | ----------------- |
-| endpoint_avg                  |                                      |                   |
-| endpoint_cpm                  | 端点每分钟请求调用的次数             |                   |
-| endpoint_percentile           | 端点采样占比                         |                   |
-| endpoint_relation_cpm         | 端点每分钟请求调用的次数             |                   |
-| endpoint_relation_percentile  | 端点采样占比关系                     |                   |
-| endpoint_relation_resp_time   | 端点与响应时间关系                   |                   |
-| endpoint_relation_server_side | 端点头和目标关系                     |                   |
-| endpoint_relation_sla         | 端点等级协议关系                     |                   |
-| endpoint_sla                  | 端点等级协议，用来表示提供服务的水平 |                   |
-| endpoint_traffic              | 端点信息，主要为服务id、端点名称     | {GET}/api/user/v1 |
-
-
-
-#### 数据库性能指标（4个索引）
-
-#### 其他索引（19）
