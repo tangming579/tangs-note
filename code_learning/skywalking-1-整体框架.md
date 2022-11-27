@@ -4,8 +4,6 @@ github：https://github.com/apache/skywalking
 
 官方文档：https://skywalking.apache.org/docs/main/next/readme/
 
-作用：分布式链路追踪系统
-
 ### 2. 项目结构
 
 #### 主服务结构
@@ -107,11 +105,25 @@ Skywalking 中 Trace 的相关概念：
 
 索引结构
 
-```
+在 Elasticsearch 中，span信息存储在 sw_segment 索引中，结构如下：
 
 ```
+trace_id：本次调用的唯一id，通过snowflake模式生成
+endpoint_name：被调用的接口
+latency：耗时
+end_time：结束时间戳
+endpoint_id：被调用的接口的唯一id
+service_instance_id：被调用的实例的唯一id
+version：本数据结构的版本号
+start_time：开始时间戳
+data_binary：里面保存了本次调用的所有Span的数据，序列化并用Base64编码，不会进行分析和用于查询
+service_id：服务的唯一id
+time_bucket：调用所处的时段
+is_error：是否失败
+segment_id：数据本身的唯一id，类似于主键，通过snowflake模式生成
+```
 
-接口返回值结构：
+使用GraphQL调用 queryTrace 接口返回值的 span 结构：
 
 ```
 traceId：本次调用的唯一id，通过snowflake模式生成
@@ -124,12 +136,16 @@ startTime：开始时间戳
 endTime：结束时间戳
 dataBinary：里面保存了本次调用的所有Span的数据，序列化并用Base64编码，不会进行分析和用于查询
 isError：是否失败
-component：
-layer：当前span所处的位置，可选项有DB
-peer：
-tags：
+component：组件类型，如Tomcat、HttpClient等，可以在 ComponentsDefine 中看到所有定义
+layer：当前span所处的位置，Spanlayer是枚举值，可选项有Unknown、Database、RPCFramework、Http、MQ、Cache
+peer：请求的目标地址，ExitSpan才有。参考：https://wu-sheng.github.io/STAM/README-cn
+tags：keyValue形式，接口的请求url、请求方式，使用@Trace注解时Tag信息
+log：span中包含的日志，可包含多条
 type：span类型，EntrySpan、LocalSpan、ExitSpan
-refs：关联关系
+refs：跨线程或跨进程时，span关联的TraceSegment
+	tranceSegmentId：父TraceSegmentId
+	spanId：父Span的Id
+	type：即 SegmentRefType，枚举类型，可选值CROSS_PROCESS、CROSS_THREAD，分别表示跨进程调用和跨线程调用
 ```
 
 #### Span传递方式
@@ -223,7 +239,7 @@ Endpoint Response Time Percentile：端口请求响应时间百分比
 Endpoint Successful Rate：请求成功率
 ```
 
-### 5. 存储结构
+### 5. 数据存储结构
 
 Skywalking AOP服务端采用模块化开放方式，在Storage模块，支持多种数据库存储，通过Selector配置来确定选择哪种存储方式,不配置的情况下默认H2
 
