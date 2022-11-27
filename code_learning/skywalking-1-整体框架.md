@@ -2,6 +2,8 @@
 
 github：https://github.com/apache/skywalking
 
+官方文档：https://skywalking.apache.org/docs/main/next/readme/
+
 作用：分布式链路追踪系统
 
 ### 2. 项目结构
@@ -74,9 +76,146 @@ skywalking
 
 ### 4. 基本概念
 
+#### 核心功能
 
+- APM指标分析
+- 服务拓扑图分析
+- 服务、服务实例和端点依赖性分析
+- 检测到慢速服务和端点(metrics)
+- 性能剖析
+- 链路追踪(trace)
+- 数据库访问指标。检测慢速数据库访问语句（包括 SQL 语句）
+- 告警
+- 日志(log)
+
+#### Open Tracing协议
+
+Open Tracing 是一套分布式追踪协议，与平台和语言无关，具有统一的接口规范，方便接入不同的分布式追踪系统。
+
+Skywalking 中 Trace 的相关概念：
+
+- Trace：描述一个分布式系统中请求从接收到处理完成的完整调用链路。
+
+- Segment：是skywalking独有的一个概念，在一次调用里所经历的一个线程生成一个Segment，与Trace是一对多关系。
+- Span：一个请求在某个进程/线程里的逻辑内的轨迹片段，与Segment是一对多关系，共三种类型span： 
+  - EntrySpan：入口span，http服务、rpc服务、MQ消费者
+  - LocalSpan：不与远程服务交互的span
+  - ExitSpan：出口span，各种clientSpan，比如httpclient的请求
+- reference：表示跨线程、进程父子关系，Reference包含上游的trace ID, segment ID, span ID, service name, service instance name, endpoint name，和客户端的目标地址 （跨线程场景中没有该字段）. reference中的这些字段是通过[Cross Process Propagation Headers Protocol v3](https://skywalking.apache.org/docs/main/next/en/protocols/skywalking-cross-process-propagation-headers-protocol-v3/) 在agent与agent之间传递的。
+
+#### Span结构
+
+```
+trace_id：本次调用的唯一id，通过snowflake模式生成
+endpoint_name：被调用的接口
+latency：耗时
+end_time：结束时间戳
+endpoint_id：被调用的接口的唯一id
+service_instance_id：被调用的实例的唯一id
+version：本数据结构的版本号
+start_time：开始时间戳
+data_binary：里面保存了本次调用的所有Span的数据，序列化并用Base64编码，不会进行分析和用于查询
+service_id：服务的唯一id
+time_bucket：调用所处的时段
+is_error：是否失败
+segment_id：数据本身的唯一id，类似于主键，通过snowflake模式生成
+```
+
+#### 监测指标
+
+- Apdex：全称是Application Performance Index，是由Apdex联盟开发的用于评估应用性能的工业标准。Apdex标准从用户的角度出发，将对应用响应时间的表现，转为用户对于应用性能的可量化范围为0-1的满意度评价。
+- cpm： 全称 call per minutes，是吞吐量(Throughput)指标。下图是拼接的全局、服务、实例和接口的吞吐量及平均吞吐量。
+  第一条185cpm=185/60=3.08个请求/秒。
+- SLA：全称 Service-Level Agreement，直译为 “服务等级协议”，用来表示提供服务的水平
+- Response Time：表示请求响应时间，对于人来说，响应时间最好不要超过2秒，超过就会觉得卡顿。对于系统接口交互来说，时间自然越短越好，500ms以内是比较好的。
+- percentile：表示采集样本中某些值的占比，Skywalking 有 “p50、p75、p90、p95、p99” 一些列值。
+
+Global
+
+```
+Services load：对于HTTP 1/2、gRPC、RPC服务，这意味着每分钟请求数（CPM），对于TCP服务，这意味着每分钟包数（PPM）
+Slow Services：慢响应服务，单位ms
+Un-Health Services (Apdex)：Apdex性能指标，1为满分。
+Global Response Latency：百分比响应延时，不同百分比的延时时间，单位ms
+Global Heatmap：服务响应时间热力分布图，根据时间段内不同响应时间的数量显示颜色深度
+```
+
+Service
+
+```
+Service Apdex（总分）：当前服务的评分
+Service Avg Response Times：平均响应延时，单位 ms
+Successful Rate（数字）：请求成功率
+Services Load （数字）：对于HTTP 1/2、gRPC、RPC服务，这意味着每分钟请求数（CPM），对于TCP服务，这意味着每分钟包数（PPM）
+Service Apdex（百分比）：当前服务的评分
+Service Response Time Percentile：请求响应时间百分比；举例：15：18的时候，有99%的请求在20ms以内，有95%的请求在10ms以内…
+Successful Rate（百分比）：请求成功率
+Service Load（折线图）：对于HTTP 1/2、gRPC、RPC服务，这意味着每分钟请求数（CPM），对于TCP服务，这意味着每分钟包数（PPM）
+
+```
+
+Instance
+
+```
+Service Instances load：当前实例每分钟请求数
+Service Instances Successful Rate：当前实例的请求成功率
+Service Instances Latency ：当前实例的响应延迟
+JVM CPU：jvm占用CPU百分比
+JVM Memory：jvm内存占用大小，单位m
+JVM GC Time：jvm垃圾回收时间，包含YGC和OGC
+JVM GC Count：jvm垃圾回收次数，包含YGC和OGC
+JVM Thread Count：JVM线程计数
+– instance_jvm_thread_live_count 实例jvm线程活动计数
+– instance_jvm_thread_daemon_count 实例
+– jvm线程守护进程计数，
+– instance_jvm_thread_peak_count 实例jvm线程峰值计数
+JVM Thread State Count：JVM线程状态计数
+– instance jvm thread runnable state thread count 实例jvm线程可运行状态线程计数
+– instance jvm thread blocked state thread count 实例jvm线程阻塞状态线程计数
+– instance jvm thread waiting state thread count 实例jvm线程等待状态线程计数
+– instance jvm thread timed waiting state thread count 实例jvm线程定时等待状态线程计数
+JVM Class Count：JVM类计数
+– instance jvm class loaded class count 实例jvm类加载类计数
+– instance jvm class total unloaded class count 实例jvm类总卸载类计数
+– instance jvm class total loaded class count 实例jvm类总加载类计数
+```
+
+Endpoint
+
+```
+Endpoint Load in Current Service：对于HTTP 1/2、gRPC、RPC服务，这意味着每分钟请求数（CPM），对于TCP服务，这意味着每分钟包数（PPM）
+Slow Endpoints in Current Service：当前服务中的慢速终结点
+Successful Rate in Current Service： 当前服务中的成功率
+Endpoint load：端口每分钟请求数
+Endpoint Avg Response Time：端口评价响应耗时，单位ms
+Endpoint Response Time Percentile：端口请求响应时间百分比
+Endpoint Successful Rate：请求成功率
+```
 
 ### 5. 存储结构
+
+Skywalking AOP服务端采用模块化开放方式，在Storage模块，支持多种数据库存储，通过Selector配置来确定选择哪种存储方式,不配置的情况下默认H2
+
+官方推荐使用Es内存数据库作为存储，如果要支持Oracle, Mysql需要加载特定的包到服务器。
+
+#### JVM 相关
+
+|                                  |      |      |
+| -------------------------------- | ---- | ---- |
+| instance_jvm_cpu                 |      |      |
+| instance_jvm_memory_heap         |      |      |
+| instance_jvm_memory_heap_max     |      |      |
+| instance_jvm_memory_noheap       |      |      |
+| instance_jvm_memory_noheap_max   |      |      |
+| instance_jvm_old_gc_count        |      |      |
+| instance_jvm_old_gc_time         |      |      |
+| instance_jvm_thread_daemon_count |      |      |
+| instance_jvm_thread_live_count   |      |      |
+| instance_jvm_thread_peak_count   |      |      |
+| instance_jvm_young_gc_count      |      |      |
+| instance_jvm_young_gc_time       |      |      |
+
+
 
 #### APM全局指标（7个索引）
 
