@@ -1,3 +1,5 @@
+## Skywalking-1-框架与概念
+
 ### 1. 概要
 
 github：https://github.com/apache/skywalking
@@ -72,7 +74,7 @@ skywalking
 |   `-- skywalking-agent.jar
 ```
 
-### 4. 基本概念
+### 3. 基本概念
 
 #### 核心功能
 
@@ -178,7 +180,7 @@ Header值中具体包含以下8个字段：
 
 Global
 
-| 图表                       | 对应指标          |                                                              |
+| 图表                       | 对应指标          | 说明                                                         |
 | -------------------------- | ----------------- | ------------------------------------------------------------ |
 | Services Load              | service_cpm       | 对于HTTP 1/2、gRPC、RPC服务，这意味着每分钟请求数（CPM），对于TCP服务，这意味着每分钟包数（PPM） |
 | Slow Services              | service_resp_time | 慢响应服务，单位ms                                           |
@@ -189,16 +191,13 @@ Global
 
 Service
 
-```
-Service Apdex（总分）：当前服务的评分
-Service Avg Response Times：平均响应延时，单位 ms
-Successful Rate（数字）：请求成功率
-Services Load （数字）：对于HTTP 1/2、gRPC、RPC服务，这意味着每分钟请求数（CPM），对于TCP服务，这意味着每分钟包数（PPM）
-Service Apdex（百分比）：当前服务的评分
-Service Response Time Percentile：请求响应时间百分比；举例：15：18的时候，有99%的请求在20ms以内，有95%的请求在10ms以内…
-Successful Rate（百分比）：请求成功率
-Service Load（折线图）：对于HTTP 1/2、gRPC、RPC服务，这意味着每分钟请求数（CPM），对于TCP服务，这意味着每分钟包数（PPM）
-```
+| 图表                             | 对应指标           | 说明                                                         |
+| -------------------------------- | ------------------ | ------------------------------------------------------------ |
+| Service Apdex                    | service_apdex      | 当前服务的评分                                               |
+| Successful Rate                  | service_sla        | 请求成功率                                                   |
+| Service Load                     | service_cpm        | 对于HTTP 1/2、gRPC、RPC服务，这意味着每分钟请求数（CPM），对于TCP服务，这意味着每分钟包数（PPM） |
+| Service Avg Response Time        | service_resp_time  | 平均响应延时，单位 ms                                        |
+| Service Response Time Percentile | service_percentile | 请求响应时间百分比；举例：15：18的时候，有99%的请求在20ms以内，有95%的请求在10ms以内 |
 
 Instance
 
@@ -238,37 +237,38 @@ Endpoint Response Time Percentile：端口请求响应时间百分比
 Endpoint Successful Rate：请求成功率
 ```
 
-### 5. 数据存储结构
+### 4. 数据存储结构
 
 Skywalking AOP服务端采用模块化开放方式，在Storage模块，支持多种数据库存储，通过Selector配置来确定选择哪种存储方式,不配置的情况下默认H2
 
 官方推荐使用Es内存数据库作为存储，如果要支持Oracle, Mysql需要加载特定的包到服务器。
 
-#### APM全局指标（7个索引）
+#### 指标类索引
 
-service_cpm
+| 索引名称              | 说明                                                    |
+| --------------------- | ------------------------------------------------------- |
+| sw_metrics-apdex      | 服务apdex分值信息                                       |
+| sw_metrics-count      | 记录服务事件                                            |
+| sw_metrics-cpm        | 服务、端点每分钟请求数（cpm）                           |
+| sw_metrics-doubleavg  | jvm实例cpu占用率                                        |
+| sw_metrics-histogram  | 热力图                                                  |
+| sw_metrics-longavg    | 端点平均耗时、端点响应时间、jvm实例 memory_heap使用内存 |
+| sw_metrics-max        |                                                         |
+| sw_metrics-percent    | 服务、端点的请求成功率（sla）                           |
+| sw_metrics-percentile | 服务、端点百分位数                                      |
+| sw_metrics-rate       |                                                         |
+| sw_metrics-sum        | jvm实例 YoungGC 和 OldGC 耗时、次数                     |
 
-#### 服务之间调用指标（8个索引）
+#### 其他重要索引
 
-#### 服务实例之间的调用指标（11个索引）
+| 索引名称                         | 说明                     |
+| -------------------------------- | ------------------------ |
+| sw_service_traffic               | 注册的服务信息           |
+| sw_endpoint_traffic              | 注册的服务端点信息       |
+| sw_instance_traffic              | 注册的服务实例信息       |
+| sw_segment                       | 链路追踪信息             |
+| sw_profile_task                  | 性能剖析任务             |
+| sw_profile_task_log              | 性能剖析任务记录         |
+| sw_profile_task_segment_snapshot | 性能剖析任务链路信息快照 |
+| sw_events                        | 服务事件                 |
 
-#### 端点指标（8个索引）
-
-| 索引名                        |                                      |                   |
-| ----------------------------- | ------------------------------------ | ----------------- |
-| endpoint_avg                  |                                      |                   |
-| endpoint_cpm                  | 端点每分钟请求调用的次数             |                   |
-| endpoint_percentile           | 端点采样占比                         |                   |
-| endpoint_relation_cpm         | 端点每分钟请求调用的次数             |                   |
-| endpoint_relation_percentile  | 端点采样占比关系                     |                   |
-| endpoint_relation_resp_time   | 端点与响应时间关系                   |                   |
-| endpoint_relation_server_side | 端点头和目标关系                     |                   |
-| endpoint_relation_sla         | 端点等级协议关系                     |                   |
-| endpoint_sla                  | 端点等级协议，用来表示提供服务的水平 |                   |
-| endpoint_traffic              | 端点信息，主要为服务id、端点名称     | {GET}/api/user/v1 |
-
-
-
-#### 数据库性能指标（4个索引）
-
-#### 其他索引（19）
