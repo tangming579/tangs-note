@@ -171,21 +171,21 @@ Header值中具体包含以下8个字段：
 #### 监测指标
 
 - Apdex：全称是Application Performance Index，是由Apdex联盟开发的用于评估应用性能的工业标准。Apdex标准从用户的角度出发，将对应用响应时间的表现，转为用户对于应用性能的可量化范围为0-1的满意度评价。
-- cpm： 全称 call per minutes，是吞吐量(Throughput)指标。下图是拼接的全局、服务、实例和接口的吞吐量及平均吞吐量。
-  第一条185cpm=185/60=3.08个请求/秒。
+- cpm： 全称 call per minutes，是吞吐量(Throughput)指标。
 - SLA：全称 Service-Level Agreement，直译为 “服务等级协议”，用来表示提供服务的水平
 - Response Time：表示请求响应时间，对于人来说，响应时间最好不要超过2秒，超过就会觉得卡顿。对于系统接口交互来说，时间自然越短越好，500ms以内是比较好的。
 - percentile：表示采集样本中某些值的占比，Skywalking 有 “p50、p75、p90、p95、p99” 一些列值。
 
 Global
 
-```
-Services load：对于HTTP 1/2、gRPC、RPC服务，这意味着每分钟请求数（CPM），对于TCP服务，这意味着每分钟包数（PPM）
-Slow Services：慢响应服务，单位ms
-Un-Health Services (Apdex)：Apdex性能指标，1为满分。
-Global Response Latency：百分比响应延时，不同百分比的延时时间，单位ms
-Global Heatmap：服务响应时间热力分布图，根据时间段内不同响应时间的数量显示颜色深度
-```
+| 图表                       | 对应指标          |                                                              |
+| -------------------------- | ----------------- | ------------------------------------------------------------ |
+| Services Load              | service_cpm       | 对于HTTP 1/2、gRPC、RPC服务，这意味着每分钟请求数（CPM），对于TCP服务，这意味着每分钟包数（PPM） |
+| Slow Services              | service_resp_time | 慢响应服务，单位ms                                           |
+| Un-Health Services (Apdex) | service_apdex     | Apdex性能指标，1为满分。                                     |
+| Slow Endpoints             | endpoint_avg      | 慢响应端口，单位ms                                           |
+| Global Response Latency    | all_percentile    | 百分比响应延时，不同百分比的延时时间，单位ms                 |
+| Global Heatmap             | all_heatmap       | 服务响应时间热力分布图，根据时间段内不同响应时间的数量显示颜色深度 |
 
 Service
 
@@ -198,7 +198,6 @@ Service Apdex（百分比）：当前服务的评分
 Service Response Time Percentile：请求响应时间百分比；举例：15：18的时候，有99%的请求在20ms以内，有95%的请求在10ms以内…
 Successful Rate（百分比）：请求成功率
 Service Load（折线图）：对于HTTP 1/2、gRPC、RPC服务，这意味着每分钟请求数（CPM），对于TCP服务，这意味着每分钟包数（PPM）
-
 ```
 
 Instance
@@ -245,26 +244,9 @@ Skywalking AOP服务端采用模块化开放方式，在Storage模块，支持�
 
 官方推荐使用Es内存数据库作为存储，如果要支持Oracle, Mysql需要加载特定的包到服务器。
 
-#### JVM 相关
-
-|                                  |      |      |
-| -------------------------------- | ---- | ---- |
-| instance_jvm_cpu                 |      |      |
-| instance_jvm_memory_heap         |      |      |
-| instance_jvm_memory_heap_max     |      |      |
-| instance_jvm_memory_noheap       |      |      |
-| instance_jvm_memory_noheap_max   |      |      |
-| instance_jvm_old_gc_count        |      |      |
-| instance_jvm_old_gc_time         |      |      |
-| instance_jvm_thread_daemon_count |      |      |
-| instance_jvm_thread_live_count   |      |      |
-| instance_jvm_thread_peak_count   |      |      |
-| instance_jvm_young_gc_count      |      |      |
-| instance_jvm_young_gc_time       |      |      |
-
-
-
 #### APM全局指标（7个索引）
+
+service_cpm
 
 #### 服务之间调用指标（8个索引）
 
