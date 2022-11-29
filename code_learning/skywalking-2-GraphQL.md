@@ -1,3 +1,5 @@
+## Skywalking-2-GraphQL
+
 ## 1. 基本概念
 
 GraphQL 是一个用于 API 的查询语言，是一个使用基于类型系统来执行查询的服务端运行时
@@ -67,7 +69,7 @@ type Starship {
 
 `length` 字段定义了一个参数，`unit`。默认值设置为 `METER`
 
-### 1.3 GraphQL Schema
+### 1.3 Schema
 
 Schemas 描述了 数据的组织形态 以及服务器上的那些数据能够被查询，Schemas提供了数据中可用的数据的对象类型，GraphQL中的对象是强类型的，因此schema中定义的所有的对象必须具备类型。类型允许GraphQL服务器确定查询是否有效或者是否在运行时。Schemas可用是两种类型`Query`和`Mutation`。
 
@@ -79,8 +81,6 @@ Schemas 描述了 数据的组织形态 以及服务器上的那些数据能够�
       posts: [Post]
     }
 ```
-
-
 
 ### 1.4 Query
 
@@ -96,6 +96,108 @@ Schemas 描述了 数据的组织形态 以及服务器上的那些数据能够�
     }
 ```
 
+## 2. Java 中使用 GraphQL
 
+参考：https://www.graphql-java.com/tutorials/getting-started-with-spring-boot/
 
-## Java 中使用 GraphQL
+### 2.1 期望接口
+
+想要实现的查询：
+
+```
+{
+  bookById(id: "book-1"){
+    id
+    name
+    pageCount
+    author {
+      firstName
+      lastName
+    }
+  }
+}
+```
+
+期待返回结果
+
+```json
+{
+  "bookById": {
+    "id":"book-1",
+    "name":"Harry Potter and the Philosopher's Stone",
+    "pageCount":223,
+    "author": {
+      "firstName":"Joanne",
+      "lastName":"Rowling"
+    }
+  }
+}
+```
+
+### 2.2 实现步骤
+
+1. 在 src/main/resources/graphql 目录下新建文件 schema.graphqls ，内容如下：
+
+   ```
+   type Query {
+     bookById(id: ID): Book
+   }
+   
+   type Book {
+     id: ID
+     name: String
+     pageCount: Int
+     author: Author
+   }
+   
+   type Author {
+     id: ID
+     firstName: String
+     lastName: String
+   }
+   ```
+
+2. 创建类 bookDetails/Book.java 、bookDetails/Author.java
+
+   ```
+   public class Book {
+       private String id;
+       private String name;
+       private int pageCount;
+       private String authorId;
+   	……
+   }
+   public class Author {
+       private String id;
+       private String firstName;
+       private String lastName;
+       ……
+   }    
+       
+   ```
+
+3. 引入类库
+
+   ```
+   <dependency>
+       <groupId>org.springframework.boot</groupId>
+       <artifactId>spring-boot-starter-graphql</artifactId>
+   </dependency>
+   ```
+
+4. 增加controller
+
+   ```
+   @Controller
+   public class BookController {
+       @QueryMapping
+       public Book bookById(@Argument String id) {
+           return Book.getById(id);
+       }
+   
+       @SchemaMapping
+       public Author author(Book book) {
+           return Author.getById(book.getAuthorId());
+       }
+   }
+   ```
