@@ -13,7 +13,7 @@ import org.springframework.stereotype.Controller;
 public class BookController {
     @QueryMapping
     public Book bookById(@Argument String id) {
-        return Book.getById(id);
+        return Book.getById(id);GraphQLQueryResolver
     }
 
     @SchemaMapping

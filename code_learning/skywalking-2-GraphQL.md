@@ -96,6 +96,8 @@ Schemas 描述了 数据的组织形态 以及服务器上的那些数据能够�
     }
 ```
 
+测试GraphQL接口可以使用Chrome浏览器的 `Altair Graphal Client`插件，也可以使用其他的客户端工具，如：graphql-playground
+
 ## 2. Java 中使用 GraphQL
 
 参考：https://www.graphql-java.com/tutorials/getting-started-with-spring-boot/
@@ -201,3 +203,34 @@ Schemas 描述了 数据的组织形态 以及服务器上的那些数据能够�
        }
    }
    ```
+
+## 3. skywalking中的GraphQL
+
+项目位置：oap-server/server-query-plugin/query-graphql-plugin
+
+pom依赖：
+
+```
+<dependency>
+    <groupId>com.graphql-java</groupId>
+    <artifactId>graphql-java</artifactId>
+</dependency>
+<dependency>
+    <groupId>com.graphql-java</groupId>
+    <artifactId>graphql-java-tools</artifactId>
+</dependency>
+<dependency>
+    <groupId>com.google.code.gson</groupId>
+    <artifactId>gson</artifactId>
+</dependency>
+```
+
+- graphql-java-tools
+
+   能够从GraphQL的模式定义 ***.graphqls** 文件构建出对应的Java的POJO类型对象（graphql-java-tools将读取classpath下所有以*.graphqls为后缀名的文件，创建GraphQLSchema对象），同时屏蔽了graphql-java的底层细节，它本身依赖graphql-java。
+
+- graphql-spring-boot-starter
+
+  辅助SpringBoot接入GraphQL的库，它本身依赖graphql-java和graphql-java-servlet（将GraphQL服务发布为通过HTTP可访问的Web服务，封装了一个GraphQLServlet接收GraphQL请求，并提供Servlet Listeners功能）。
+
+类库的使用可以参考：https://github.com/graphql-java-kickstart
