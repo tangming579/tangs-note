@@ -196,3 +196,19 @@ public class SnifferConfigInitializer {
 }
 ```
 
+### Agent 配置说明
+
+| 配置项                                               | 说明                                                         |
+| ---------------------------------------------------- | ------------------------------------------------------------ |
+| agent.service_name                                   | 在SkyWalking UI中展示的服务名。                              |
+| collector.backend_service                            | oap地址                                                      |
+| agent.sample_n_per_3_secs                            | 每3秒取多少次采样；默认情况下-1，代表全采样；这个值可通过Skywalking的动态配置功能来实现运行期的动态调整 |
+| logging.level                                        | 调试阶段可将日志级别修改为DEBUG                              |
+| agent.span_limit_per_segment                         | 单个segment中的span的最大个数。通过这个配置项，Skywalking可评估应用程序内存使用量。默认值300 |
+| collector.grpc_channel_check_interval                | 检查grpc的channel状态的时间间隔。                            |
+| collector.app_and_service_register_check_interval    | 检查应用和服务的注册状态的时间间隔。                         |
+| plugin.springmvc.use_qualified_name_as_endpoint_name | 如果为true，endpoint的name为方法的全限定名，而不是请求的URL。默认为false。 |
+| plugin.toolit.use_qualified_name_as_operation_name   | 如果为true，operation的name为方法的全限定名，而不是给定的operation name。默认为false。 |
+| plugin.postgresql.trace_sql_parameters               | 如果设置为true，则将收集sql的参数（通常为`java.sql.PreparedStatement`）。 |
+|                                                      |                                                              |
+
