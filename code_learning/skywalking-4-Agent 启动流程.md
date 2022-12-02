@@ -24,7 +24,7 @@ Skywalking Agent Premain方法
 
 代码位置：/apm-sniffer/apm-agent，是 agent 执行的主入口
 
-启动步骤：1. 初始化配置；2.加载插件；3.定制化 Agent 行为；4.启动服务；5.注册关闭钩子
+启动步骤：1. 初始化配置；2.加载插件；3.插桩定制 Agent；4.启动服务；5.注册关闭钩子
 
 ```java
 public class SkyWalkingAgent {
@@ -59,7 +59,7 @@ public class SkyWalkingAgent {
             return;
         }
 
-        // 3.定制化Agent行为
+        // 3.插桩定制化Agent行为
         final ByteBuddy byteBuddy = new ByteBuddy().with(TypeValidation.of(Config.Agent.IS_OPEN_DEBUGGING_CLASS));
 
         AgentBuilder agentBuilder = new AgentBuilder.Default(byteBuddy).ignore(
@@ -176,7 +176,7 @@ public class SnifferConfigInitializer {
         if (StringUtil.isEmpty(Config.Collector.BACKEND_SERVICE)) {
             throw new ExceptionInInitializerError("`collector.backend_service` is missing.");
         }
-        // peer 字段长度
+        // peer 字段长度判断
         if (Config.Plugin.PEER_MAX_LENGTH <= 3) {
             LOGGER.warn(
                 "PEER_MAX_LENGTH configuration:{} error, the default value of 200 will be used.",
@@ -193,7 +193,64 @@ public class SnifferConfigInitializer {
 
 ### 2. 加载插件
 
-### 3. 启动服务
+```java
+public List<AbstractClassEnhancePluginDefine> loadPlugins() throws AgentPackageNotFoundException {
+    //初始化自定义类加载器AgentClassLoader
+    AgentClassLoader.initDefaultLoader();
+    PluginResourcesResolver resolver = new PluginResourcesResolver();
+    List<URL> resources = resolver.getResources();
+    if (resources == null || resources.size() == 0) {
+        LOGGER.info("no plugin files (skywalking-plugin.def) found, continue to start application.");
+        return new ArrayList<AbstractClassEnhancePluginDefine>();
+    }
+    for (URL pluginUrl : resources) {
+        try {
+            PluginCfg.INSTANCE.load(pluginUrl.openStream());
+        } catch (Throwable t) {
+            LOGGER.error(t, "plugin file [{}] init failure.", pluginUrl);
+        }
+    }
+    List<PluginDefine> pluginClassList = PluginCfg.INSTANCE.getPluginClassList();
+    List<AbstractClassEnhancePluginDefine> plugins = new ArrayList<AbstractClassEnhancePluginDefine>();
+    for (PluginDefine pluginDefine : pluginClassList) {
+        try {
+            LOGGER.debug("loading plugin class {}.", pluginDefine.getDefineClass());
+            AbstractClassEnhancePluginDefine plugin = (AbstractClassEnhancePluginDefine) Class.forName(pluginDefine.getDefineClass(), true, AgentClassLoader
+                .getDefault()).newInstance();
+            plugins.add(plugin);
+        } catch (Throwable t) {
+            LOGGER.error(t, "load plugin [{}] failure.", pluginDefine.getDefineClass());
+        }
+    }
+    plugins.addAll(DynamicPluginLoader.INSTANCE.load(AgentClassLoader.getDefault()));
+    return plugins;
+}
+```
+
+#### 2.1 类加载器的并行加载模式
+
+AgentClassLoader的静态代码块里调用ClassLoader的`registerAsParallelCapable()`方法
+
+```
+public class AgentClassLoader extends ClassLoader {
+    static {
+        registerAsParallelCapable();
+    }
+```
+
+并行能力的类加载器:
+
+在JDK 1.7之前，类加载器在加载类的时候是串行加载的，比如有100个类需要加载，那么就排队，加载完上一个再加载下一个，这样加载效率就很低
+
+在JDK 1.7之后，就提供了类加载器并行能力，就是把锁的粒度变小，之前ClassLoader加载类的时候加锁的时候是用自身作为锁的
+
+#### 2.2 AgentClassLoader 加载流程
+
+#### 2.3 Agent 插件定义
+
+### 3. 插桩定制 Agent
+
+### 4. 启动服务
 
 ### Agent Config 主要配置说明
 
