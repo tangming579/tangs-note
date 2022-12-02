@@ -2,6 +2,8 @@
 
 ### Agent 总体流程
 
+启动方式：
+
 - 静态启动
 
   - 使用 -javaagent 参数在服务启动时挂在 agent
@@ -20,7 +22,9 @@
 
 Skywalking Agent Premain方法
 
-位置：/apm-sniffer/apm-agent
+代码位置：/apm-sniffer/apm-agent，是 agent 执行的主入口
+
+启动步骤：1. 初始化配置；2.加载插件；3.定制化 Agent 行为；4.启动服务；5.注册关闭钩子
 
 ```java
 public class SkyWalkingAgent {
@@ -113,7 +117,9 @@ public class SkyWalkingAgent {
 }
 ```
 
-### Agent 配置加载流程
+
+
+### 1. 初始化配置流程
 
 Agent打包目录下的config目录中有个`agent.config`的文件，这就是Agent的配置文件
 
@@ -124,6 +130,7 @@ public class SnifferConfigInitializer {
     public static void initializeCoreConfig(String agentOptions) {
         // 加载配置信息 优先级:agent参数 > 系统环境变量 > /config/agent.config
         AGENT_SETTINGS = new Properties();
+        //agent 配置文件
         try (final InputStreamReader configFileStream = loadConfig()) {
             AGENT_SETTINGS.load(configFileStream);
             for (String key : AGENT_SETTINGS.stringPropertyNames()) {
@@ -143,7 +150,7 @@ public class SnifferConfigInitializer {
             LOGGER.error(e, "Failed to read the system properties.");
         }
 
-        // agent参数
+        // agent 参数
         agentOptions = StringUtil.trim(agentOptions, ',');
         if (!StringUtil.isEmpty(agentOptions)) {
             try {
@@ -169,6 +176,7 @@ public class SnifferConfigInitializer {
         if (StringUtil.isEmpty(Config.Collector.BACKEND_SERVICE)) {
             throw new ExceptionInInitializerError("`collector.backend_service` is missing.");
         }
+        // peer 字段长度
         if (Config.Plugin.PEER_MAX_LENGTH <= 3) {
             LOGGER.warn(
                 "PEER_MAX_LENGTH configuration:{} error, the default value of 200 will be used.",
@@ -180,34 +188,25 @@ public class SnifferConfigInitializer {
         // 标记配置加载完成
         IS_INIT_COMPLETED = true;
     }
-  
-    /**
-     * 根据配置信息重新指定日志解析器 JSON和PATTERN两种日志格式
-     */
-    static void configureLogger() {
-        switch (Config.Logging.RESOLVER) {
-            case JSON:
-                LogManager.setLogResolver(new JsonLogResolver());
-                break;
-            case PATTERN:
-            default:
-                LogManager.setLogResolver(new PatternLogResolver());
-        }
 }
 ```
 
-### Agent 配置说明
+### 2. 加载插件
+
+### 3. 启动服务
+
+### Agent Config 主要配置说明
 
 | 配置项                                               | 说明                                                         |
 | ---------------------------------------------------- | ------------------------------------------------------------ |
 | agent.service_name                                   | 在SkyWalking UI中展示的服务名。                              |
-| collector.backend_service                            | oap地址                                                      |
+| collector.backend_service                            | oap地址，grpc数据上报                                        |
 | agent.sample_n_per_3_secs                            | 每3秒取多少次采样；默认情况下-1，代表全采样；这个值可通过Skywalking的动态配置功能来实现运行期的动态调整 |
 | logging.level                                        | 调试阶段可将日志级别修改为DEBUG                              |
 | agent.span_limit_per_segment                         | 单个segment中的span的最大个数。通过这个配置项，Skywalking可评估应用程序内存使用量。默认值300 |
 | collector.grpc_channel_check_interval                | 检查grpc的channel状态的时间间隔。                            |
 | collector.app_and_service_register_check_interval    | 检查应用和服务的注册状态的时间间隔。                         |
-| plugin.springmvc.use_qualified_name_as_endpoint_name | 如果为true，endpoint的name为方法的全限定名，而不是请求的URL。默认为false。 |
+| plugin.springmvc.use_qualified_name_as_endpoint_name | 如果为true，endpoint的name为方法的全限定名，而不是请求的URL。默认为false。（仅针对springmvc） |
 | plugin.toolit.use_qualified_name_as_operation_name   | 如果为true，operation的name为方法的全限定名，而不是给定的operation name。默认为false。 |
 | plugin.postgresql.trace_sql_parameters               | 如果设置为true，则将收集sql的参数（通常为`java.sql.PreparedStatement`）。 |
 |                                                      |                                                              |
