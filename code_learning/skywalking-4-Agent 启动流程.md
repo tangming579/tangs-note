@@ -281,7 +281,268 @@ jedis-2.x=org.apache.skywalking.apm.plugin.jedis.v2.define.JedisInstrumentation
 
 ### 3. 插桩定制 Agent
 
-### 4. 启动服务
+### 4. 启动插件服务
+
+Agent 在 premain 中调用`ServiceManager.INSTANCE.boot()`来启动插件服务，并利用SPI机制加载配置的各种插件的`BootService`，然后依次遍历BootService实例，调用他们的prepare()准备方法、startup();启动方法和onComplete()完成方法。
+
+ 负责加载所有的`BootService` 实现类，以及启动这些实现类
+
+```java
+public enum ServiceManager {
+	public void boot() {
+        //去加载 BootService接口的实现类
+        bootedServices = loadAllServices();
+        //调用 BootService接口 的prepare 方法
+        prepare();
+        //调用 BootService接口 boot 方法
+        startup();
+        //调用 BootService接口 onComplete 方法
+        onComplete();
+    }
+    
+    //加载插件方法
+    void load(List<BootService> allServices) {
+    	for (final BootService bootService : ServiceLoader.load(BootService.class, AgentClassLoader.getDefault())){ 
+        	allServices.add(bootService);
+        }
+    }
+}
+```
+
+`BootService` 接口定义：
+
+```java
+public interface BootService {
+    void prepare() throws Throwable;
+    void boot() throws Throwable;
+    void onComplete() throws Throwable;
+    void shutdown() throws Throwable;
+}
+```
+
+主要实现类
+
+#### GRPCChannelManager
+
+作用：Agent到OAP的GRPC网络连接管理
+
+它只实现了boot() 和 shutdown() 方法
+
+```java
+@Override
+public void boot() {
+    //解析用户配置的 skywalking.collector.backend_service 参数，如果写了多个IP地址用逗号分隔
+    grpcServers = Arrays.asList(Config.Collector.BACKEND_SERVICE.split(","));
+    //这里开了一个定时任务，30s执行一次
+    connectCheckFuture = Executors.newSingleThreadScheduledExecutor(
+        new DefaultNamedThreadFactory("GRPCChannelManager")
+    ).scheduleAtFixedRate(
+        new RunnableWithExceptionProtection(
+            this,
+            t -> LOGGER.error("unexpected exception.", t)
+        ), 0, Config.Collector.GRPC_CHANNEL_CHECK_INTERVAL, TimeUnit.SECONDS
+    );
+}
+```
+
+run方法：
+
+```java
+@Override
+public void run() {
+    //如果需要重连和刷新dns，刷新当前配置的域名对应的ip地址，进行格式化，组成OAP地址列表
+    if (IS_RESOLVE_DNS_PERIODICALLY && reconnect) {
+        String backendService = Config.Collector.BACKEND_SERVICE.split(",")[0];
+        try {
+            String[] domainAndPort = backendService.split(":");
+            List<String> newGrpcServers = Arrays
+                    .stream(InetAddress.getAllByName(domainAndPort[0]))
+                    .map(InetAddress::getHostAddress)
+                    .map(ip -> String.format("%s:%s", ip, domainAndPort[1]))
+                    .collect(Collectors.toList());
+            grpcServers = newGrpcServers;
+        } catch (Throwable t) {
+            LOGGER.error(t, "Failed to resolve {} of backend service.", backendService);
+        }
+    }
+    //如果需要重连网络连接
+    if (reconnect) {
+        if (grpcServers.size() > 0) {
+            String server = "";
+            try {
+                //随机选择一个服务器
+                int index = Math.abs(random.nextInt()) % grpcServers.size();
+                //如果这次选到的IP和上次选到的不同就生成 GRPCChannel 对象
+                if (index != selectedIdx) {
+                    selectedIdx = index;
+                    server = grpcServers.get(index);
+                    String[] ipAndPort = server.split(":");
+                    if (managedChannel != null) {
+                        managedChannel.shutdownNow();
+                    }
+                   //选出来的 ip地址创建一个 managedChannel
+                   managedChannel = GRPCChannel.newBuilder(ipAndPort[0], Integer.parseInt(ipAndPort[1]))
+                            .addManagedChannelBuilder(new StandardChannelBuilder())
+                            .addManagedChannelBuilder(new TLSChannelBuilder())
+                            .addChannelDecorator(new AgentIDDecorator())
+                            .addChannelDecorator(new AuthenticationDecorator())
+                            .build();
+                    //通知所有的GRPCChannelListener已连接
+                    notify(GRPCChannelStatus.CONNECTED);
+                    reconnectCount = 0;
+                    reconnect = false;
+                } else if (managedChannel.isConnected(++reconnectCount > Config.Agent.FORCE_RECON
+                    // Reconnect to the same server is automatically done by GRPC,
+                    // therefore we are responsible to check the connectivity and
+                    // set the state and notify listeners
+                    reconnectCount = 0;
+                    notify(GRPCChannelStatus.CONNECTED);
+                    reconnect = false;
+                }
+                return;
+            } catch (Throwable t) {
+                LOGGER.error(t, "Create channel to {} fail.", server);
+            }
+        }
+    }
+```
+
+总结：
+
+1. 随机选择一个服务器ip和端口
+2. 根据ip和端口创建 managedChannel 用于与OAP实例建立连接
+3. 调用notify()方法通知所有的GRPCChannelListener连接成功的状态
+4. 设置重新连接为false
+5. 所有使用到 `ManagedChannel` 对象的地方，如果发送失败了，都会去调用 `reportError()` 的方法，重新设置`reconnect = true`
+
+#### ServiceManagementClient
+
+作用：1.向OAP汇报自身信息；2.保持心跳连接
+
+同时实现了 GRPCChannelListener 和 BootService 接口，`statusChanged()`方法
+
+```java
+/**
+ * 1.将当前Agent Client的基本信息汇报给OAP
+ * 2.和OAP保持心跳
+ */
+@DefaultImplementor
+public class ServiceManagementClient implements BootService, Runnable, GRPCChannelListener {
+	// 当前网络连接状态
+    private volatile GRPCChannelStatus status = GRPCChannelStatus.DISCONNECT;   
+    // 网络服务
+    private volatile ManagementServiceGrpc.ManagementServiceBlockingStub managementServiceBlockingStub; 
+    @Override
+    public void statusChanged(GRPCChannelStatus status) {
+        // 网络是否是已连接状态
+        if (GRPCChannelStatus.CONNECTED.equals(status)) {
+            // 找到GRPCChannelManager服务,拿到网络连接
+            Channel channel = ServiceManager.INSTANCE.findService(GRPCChannelManager.class).getChannel();
+            // grpc的stub可以理解为在protobuf中定义的XxxService
+            managementServiceBlockingStub = ManagementServiceGrpc.newBlockingStub(channel);
+        } else {
+            managementServiceBlockingStub = null;
+        }
+        this.status = status;
+    }
+```
+
+prepare阶段：
+
+```java
+@Override
+public void prepare() {
+    //向GRPCChannelManager注册自己为监听器
+    ServiceManager.INSTANCE.findService(GRPCChannelManager.class).addChannelListener(this);
+    SERVICE_INSTANCE_PROPERTIES = new ArrayList<>();
+    //把配置文件中的Agent Client信息放入集合,等待发送
+    for (String key : Config.Agent.INSTANCE_PROPERTIES.keySet()) {
+        SERVICE_INSTANCE_PROPERTIES.add(KeyStringValuePair.newBuilder().setKey(key)
+    	.setValue(Config.Agent.INSTANCE_PROPERTIES.get(key)).build());
+    }
+    //服务实例名是否存在，不存在就使用 UUID + IP 生成一个
+    Config.Agent.INSTANCE_NAME = StringUtil.isEmpty(Config.Agent.INSTANCE_NAME)
+        ? UUID.randomUUID().toString().replaceAll("-", "") + "@" + OSUtil.getIPV4()
+        : Config.Agent.INSTANCE_NAME;
+}
+```
+
+boot阶段：
+
+```java
+@DefaultImplementor
+public class ServiceManagementClient implements BootService, Runnable, GRPCChannelListener {
+    private volatile ScheduledFuture<?> heartbeatFuture; // 心跳定时任务  	
+	@Override
+    public void boot() {
+        heartbeatFuture = Executors.newSingleThreadScheduledExecutor(
+            new DefaultNamedThreadFactory("ServiceManagementClient")
+        ).scheduleAtFixedRate(
+            new RunnableWithExceptionProtection(
+                this,
+                t -> LOGGER.error("unexpected exception.", t)
+            ), 0, Config.Collector.HEARTBEAT_PERIOD,
+            TimeUnit.SECONDS
+        );
+}
+```
+
+`boot()`方法中初始化心跳定时任务heartbeatFuture，Runnable传入的是this，实际上执行的是ServiceManagementClient的`run()`方法
+
+```java
+@Override
+public void run() {
+    LOGGER.debug("ServiceManagementClient running, status:{}.", status);
+    //网络是否是已连接状态
+    if (GRPCChannelStatus.CONNECTED.equals(status)) {
+        try {
+            if (managementServiceBlockingStub != null) {
+                //心跳周期 = 30s, 信息汇报频率因子 = 10 => 每5分钟向OAP汇报一次Agent Client Properties
+                if (Math.abs(sendPropertiesCounter.getAndAdd(1)) % Config.Collector.PROPERTIES_REPORT_PERIOD_FACTOR == 0) {
+                    managementServiceBlockingStub
+                        //设置请求超时时间,默认30秒
+                        .withDeadlineAfter(GRPC_UPSTREAM_TIMEOUT, TimeUnit.SECONDS)
+                        .reportInstanceProperties(InstanceProperties.newBuilder()
+                                                                    .setService(Config.Agent.SERVICE_NAME)
+                                                                    .setServiceInstance(Config.Agent.INSTANCE_NAME)
+                                                                    .addAllProperties(OSUtil.buildOSInfo(
+                                                                        Config.OsInfo.IPV4_LIST_SIZE))
+                                                                    .addAllProperties(SERVICE_INSTANCE_PROPERTIES)
+                                                                    .build());
+                } else {
+                    //服务端给到的响应交给CommandService去处理
+                    final Commands commands = managementServiceBlockingStub.withDeadlineAfter(
+                        GRPC_UPSTREAM_TIMEOUT, TimeUnit.SECONDS
+                    ).keepAlive(InstancePingPkg.newBuilder()
+                                               .setService(Config.Agent.SERVICE_NAME)
+                                               .setServiceInstance(Config.Agent.INSTANCE_NAME)
+                                               .build());
+                    ServiceManager.INSTANCE.findService(CommandService.class).receiveCommand(commands);
+                }
+            }
+        } catch (Throwable t) {
+            LOGGER.error(t, "ServiceManagementClient execute fail.");
+            ServiceManager.INSTANCE.findService(GRPCChannelManager.class).reportError(t);
+        }
+    }
+}
+```
+
+心跳周期为30s，信息汇报频率因子为10，所以每5分钟向OAP汇报一次Agent Client Properties
+
+判断本次是否是Agent信息上报
+
+1）如果本次是信息上报，上报Agent信息，包括：服务名、实例名、Agent Client的信息、当前操作系统的信息、JVM信息
+
+2）如果本次不是信息上报，请求服务端，将服务端给到的响应交给CommandService去处理
+
+#### ProfileTaskChannelService
+
+
+
+#### SamplingService
+
+
 
 ### Agent Config 主要配置说明
 
