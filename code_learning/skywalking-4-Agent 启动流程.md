@@ -536,13 +536,21 @@ public void run() {
 
 2）如果本次不是信息上报，请求服务端，将服务端给到的响应交给CommandService去处理
 
+#### CommandService
+
+作用：接收 OAP 返回的Command，分发给不同的处理器去处理
+
+
+
 #### ProfileTaskChannelService
+
+作用：用于处理性能剖析任务
 
 
 
 #### SamplingService
 
-
+作用：采样搜集，可以限定 `3S`内发送多少 `trace` 数据，超过的数据将会被丢弃
 
 ### Agent Config 主要配置说明
 
@@ -558,5 +566,3 @@ public void run() {
 | plugin.springmvc.use_qualified_name_as_endpoint_name | 如果为true，endpoint的name为方法的全限定名，而不是请求的URL。默认为false。（仅针对springmvc） |
 | plugin.toolit.use_qualified_name_as_operation_name   | 如果为true，operation的name为方法的全限定名，而不是给定的operation name。默认为false。 |
 | plugin.postgresql.trace_sql_parameters               | 如果设置为true，则将收集sql的参数（通常为`java.sql.PreparedStatement`）。 |
-|                                                      |                                                              |
-
