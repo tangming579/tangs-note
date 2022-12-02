@@ -229,7 +229,7 @@ public List<AbstractClassEnhancePluginDefine> loadPlugins() throws AgentPackageN
 
 #### 2.1 类加载器的并行加载模式
 
-AgentClassLoader的静态代码块里调用ClassLoader的`registerAsParallelCapable()`方法
+AgentClassLoader的静态代码块里调用ClassLoader的方法
 
 ```
 public class AgentClassLoader extends ClassLoader {
@@ -246,7 +246,38 @@ public class AgentClassLoader extends ClassLoader {
 
 #### 2.2 AgentClassLoader 加载流程
 
+1. 调用 `registerAsParallelCapable()` 方法开启并行加载
+2. 调用 `initDefaultLoader`() 初始化默认类加载器
+3. 加载在 agent 主目录下的plugins和activations的所有插件
+4. 如果被加载的类标注了@PluginConfig注解，会加载插件的配置
+
 #### 2.3 Agent 插件定义
+
+**插件代码位置：**
+
+- apm-sniffer/apm-sdk-plugin
+- apm-sniffer/apm-toolkit-activation
+
+**插件定义：**
+
+命名规则：XXXInstrumentation.java
+
+```
+public class JedisInstrumentation extends ClassInstanceMethodsEnhancePluginDefine {
+
+
+}
+```
+
+**插件声明：**
+
+resources目录下的`skywalking-plugin.def`文件是对插件的声明
+
+```
+# 插件名=插件定义全类名
+jedis-2.x=org.apache.skywalking.apm.plugin.jedis.v2.define.JedisClusterInstrumentation
+jedis-2.x=org.apache.skywalking.apm.plugin.jedis.v2.define.JedisInstrumentation
+```
 
 ### 3. 插桩定制 Agent
 
