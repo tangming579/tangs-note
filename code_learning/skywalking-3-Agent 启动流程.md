@@ -606,6 +606,103 @@ public void run() {
 }
 ```
 
+每20s执行一次，把`服务ID`和`实例ID`传给skywalking 看看有没对应的 `ProfileTask` ， 如果有就让 `CommandService` 去执行对应的 `commands`，即 `ProfileTaskCommand` 
+
+`ProfileTaskCommandExecutor` 代码：
+
+```
+public class ProfileTaskCommandExecutor implements CommandExecutor {
+    @Override
+    public void execute(BaseCommand command) throws CommandExecutionException {
+        final ProfileTaskCommand profileTaskCommand = (ProfileTaskCommand) command;
+        // 生成 profile task
+        final ProfileTask profileTask = new ProfileTask();
+        profileTask.setTaskId(profileTaskCommand.getTaskId());
+        profileTask.setFirstSpanOPName(profileTaskCommand.getEndpointName());
+        profileTask.setDuration(profileTaskCommand.getDuration());
+        profileTask.setMinDurationThreshold(profileTaskCommand.getMinDurationThreshold());
+        profileTask.setThreadDumpPeriod(profileTaskCommand.getDumpPeriod());
+        profileTask.setMaxSamplingCount(profileTaskCommand.getMaxSamplingCount());
+        profileTask.setStartTime(profileTaskCommand.getStartTime());
+        profileTask.setCreateTime(profileTaskCommand.getCreateTime());
+        // 添加到 ProfileTaskExecutionService的执行任务里
+        ServiceManager.INSTANCE.findService(ProfileTaskExecutionService.class).addProfileTask(profileTask);
+    }
+}
+```
+
+`ProfileTaskExecutionService` 的 `addProfileTask`，把任务加入队列，然后开启一个定时器，在指定时间后去执行任务
+
+```JAVA
+public void addProfileTask(ProfileTask task) {        
+    // 把ProfileTaskCommand 任务存入队列
+    profileTaskList.add(task);
+    //到达用户设置的时间后开启任务
+    long timeToProcessMills = task.getStartTime() - System.currentTimeMillis();
+    PROFILE_TASK_SCHEDULE.schedule(() -> processProfileTask(task),timeToProcessMills,TimeUnit.MILLISECONDS);
+}
+```
+
+如果时间到了，就会执行下面的方法
+
+```
+private synchronized void processProfileTask(ProfileTask task) {
+        // 确保上一个 任务已经停止
+        stopCurrentProfileTask(taskExecutionContext.get());
+        // 创建一个新的任务
+        final ProfileTaskExecutionContext currentStartedTaskContext = new ProfileTaskExecutionContext(task);
+        taskExecutionContext.set(currentStartedTaskContext);
+        // 开了一个线程去执行对应的性能剖析任务
+        currentStartedTaskContext.startProfiling(PROFILE_EXECUTOR);
+        PROFILE_TASK_SCHEDULE.schedule(
+            () -> stopCurrentProfileTask(currentStartedTaskContext), task.getDuration(), TimeUnit.MINUTES);
+}
+```
+
+最终执行的地方：
+
+```java
+public class ProfileThread implements Runnable {
+  private void profiling(ProfileTaskExecutionContext executionContext) throws InterruptedException {
+    int maxSleepPeriod = executionContext.getTask().getThreadDumpPeriod();
+    // run loop when current thread still running
+    long currentLoopStartTime = -1;
+    while (!Thread.currentThread().isInterrupted()) {
+        currentLoopStartTime = System.currentTimeMillis();
+        // each all slot
+        AtomicReferenceArray<ThreadProfiler> profilers = executionContext.threadProfilerSlots();
+        int profilerCount = profilers.length();
+        for (int slot = 0; slot < profilerCount; slot++) {
+            ThreadProfiler currentProfiler = profilers.get(slot);
+            if (currentProfiler == null) {
+                continue;
+            }
+            switch (currentProfiler.profilingStatus().get()) {
+                case PENDING:
+                    // check tracing context running time
+                    currentProfiler.startProfilingIfNeed();
+                    break;
+                case PROFILING:
+                    // dump stack
+                    TracingThreadSnapshot snapshot = currentProfiler.buildSnapshot();
+                    if (snapshot != null) {
+                        profileTaskChannelService.addProfilingSnapshot(snapshot);
+                    } else {
+                        // tell execution context current tracing thread dump failed, stop it
+                        executionContext.stopTracingProfile(currentProfiler.tracingContext());
+                    }
+                    break;
+            }
+        }
+        // sleep to next period
+        // if out of period, sleep one period
+        long needToSleep = (currentLoopStartTime + maxSleepPeriod) - System.currentTimeMillis();
+        needToSleep = needToSleep > 0 ? needToSleep : maxSleepPeriod;
+        Thread.sleep(needToSleep);
+    }
+}
+```
+
 
 
 #### SamplingService
