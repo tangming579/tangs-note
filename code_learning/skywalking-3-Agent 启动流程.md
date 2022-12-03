@@ -546,6 +546,66 @@ public void run() {
 
 作用：用于处理性能剖析任务
 
+```java
+@Override
+    public void prepare() {
+        //向GRPCChannelManager注册自己为监听器
+        ServiceManager.INSTANCE.findService(GRPCChannelManager.class).addChannelListener(this);
+    }
+
+    @Override
+    public void boot() {
+        //找到发送segment的sender
+        sender = ServiceManager.INSTANCE.findService(ProfileSnapshotSender.class);
+        if (Config.Profile.ACTIVE) {
+            // 创建获取任务列表定时器，20s执行一次
+            getTaskListFuture = Executors.newSingleThreadScheduledExecutor(
+                new DefaultNamedThreadFactory("ProfileGetTaskService")
+            ).scheduleWithFixedDelay(
+                new RunnableWithExceptionProtection(
+                    this,
+                    t -> LOGGER.error("Query profile task list failure.", t)
+                ), 0, Config.Collector.GET_PROFILE_TASK_INTERVAL, TimeUnit.SECONDS
+            );
+			// 创建发送segment快照定时器，500ms执行一次
+            sendSnapshotFuture = Executors.newSingleThreadScheduledExecutor(
+                new DefaultNamedThreadFactory("ProfileSendSnapshotService")
+            ).scheduleWithFixedDelay(
+                new RunnableWithExceptionProtection(
+                    () -> {
+                        List<TracingThreadSnapshot> buffer = new ArrayList<>(Config.Profile.SNAPSHOT_TRANSPORT_BUFFER_SIZE);
+                        snapshotQueue.drainTo(buffer);
+                        if (!buffer.isEmpty()) {
+                            sender.send(buffer);
+                        }
+                    },
+                    t -> LOGGER.error("Profile segment snapshot upload failure.", t)
+                ), 0, 500, TimeUnit.MILLISECONDS
+            );
+        }
+    }
+```
+
+getTaskListFuture 的run方法：
+
+```java
+@Override
+public void run() {
+    if (status == GRPCChannelStatus.CONNECTED) {
+        try {
+            ProfileTaskCommandQuery.Builder builder = ProfileTaskCommandQuery.newBuilder();
+            // 把服务ID和实例ID传给skywalking 看看有没对应的 ProfileTask
+            builder.setService(Config.Agent.SERVICE_NAME).setServiceInstance(Config.Agent.INSTANCE_NAME);
+ builder.setLastCommandTime(ServiceManager.INSTANCE.findService(ProfileTaskExecutionService.class)
+                                                              .getLastCommandCreateTime());
+            Commands commands = profileTaskBlockingStub.withDeadlineAfter(GRPC_UPSTREAM_TIMEOUT, TimeUnit.SECONDS)
+                                                       .getProfileTaskCommands(builder.build());
+            ServiceManager.INSTANCE.findService(CommandService.class).receiveCommand(commands);
+        } catch (Throwable t) {
+    }
+}
+```
+
 
 
 #### SamplingService
