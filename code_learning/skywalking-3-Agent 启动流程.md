@@ -668,7 +668,7 @@ public void addProfileTask(ProfileTask task) {
 
 如果时间到了，就会执行下面的方法
 
-```
+```java
 private synchronized void processProfileTask(ProfileTask task) {
         // 确保上一个 任务已经停止
         stopCurrentProfileTask(taskExecutionContext.get());
