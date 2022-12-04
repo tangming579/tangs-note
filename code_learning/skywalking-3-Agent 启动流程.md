@@ -546,6 +546,20 @@ public void run() {
 
 作用：用于处理性能剖析任务
 
+开启两个定时器
+
+- 20s执行一次
+
+  1. 向skywalking查询当前服务实例有没有ProfileTask
+  2. 如果有，就创建一个任务并把任务加入profileTaskList
+  3. 然后开启一个定时器，在skywalking界面设置的开始时间后去执行任务
+  4. 关闭老的剖析任务，然后开启两个线程：一个线程去执行当前性能剖析任务，另一个在到达指定时间后关闭当前性能剖析任务
+  5. 执行剖析任务，开启死循环，不断去获取 currentProfiler ，拿到 dump 堆栈信息放到 snapshotQueue 里
+
+- 500ms执行一次
+
+  判断 snapshotQueue 中是否有 segment 快照，如果有就发送快照给skywalking
+
 ```java
 @Override
     public void prepare() {
@@ -576,6 +590,7 @@ public void run() {
                         List<TracingThreadSnapshot> buffer = new ArrayList<>(Config.Profile.SNAPSHOT_TRANSPORT_BUFFER_SIZE);
                         snapshotQueue.drainTo(buffer);
                         if (!buffer.isEmpty()) {
+                            //TracingThreadSnapshot转换为ThreadSnapshot发送给server
                             sender.send(buffer);
                         }
                     },
@@ -617,13 +632,21 @@ public class ProfileTaskCommandExecutor implements CommandExecutor {
         final ProfileTaskCommand profileTaskCommand = (ProfileTaskCommand) command;
         // 生成 profile task
         final ProfileTask profileTask = new ProfileTask();
+        //任务id
         profileTask.setTaskId(profileTaskCommand.getTaskId());
+        //监控端点名称
         profileTask.setFirstSpanOPName(profileTaskCommand.getEndpointName());
+        //监控持续时间（minute）
         profileTask.setDuration(profileTaskCommand.getDuration());
+        //起始监控时间（ms）
         profileTask.setMinDurationThreshold(profileTaskCommand.getMinDurationThreshold());
+        //监控dump间隔（ms）
         profileTask.setThreadDumpPeriod(profileTaskCommand.getDumpPeriod());
+        //最大采样数量
         profileTask.setMaxSamplingCount(profileTaskCommand.getMaxSamplingCount());
+        //任务开始时间
         profileTask.setStartTime(profileTaskCommand.getStartTime());
+        //任务创建时间
         profileTask.setCreateTime(profileTaskCommand.getCreateTime());
         // 添加到 ProfileTaskExecutionService的执行任务里
         ServiceManager.INSTANCE.findService(ProfileTaskExecutionService.class).addProfileTask(profileTask);
@@ -665,11 +688,11 @@ private synchronized void processProfileTask(ProfileTask task) {
 public class ProfileThread implements Runnable {
   private void profiling(ProfileTaskExecutionContext executionContext) throws InterruptedException {
     int maxSleepPeriod = executionContext.getTask().getThreadDumpPeriod();
-    // run loop when current thread still running
+    // 开启一个死循环保证线程执行
     long currentLoopStartTime = -1;
     while (!Thread.currentThread().isInterrupted()) {
         currentLoopStartTime = System.currentTimeMillis();
-        // each all slot
+        // 采集插槽
         AtomicReferenceArray<ThreadProfiler> profilers = executionContext.threadProfilerSlots();
         int profilerCount = profilers.length();
         for (int slot = 0; slot < profilerCount; slot++) {
@@ -683,7 +706,7 @@ public class ProfileThread implements Runnable {
                     currentProfiler.startProfilingIfNeed();
                     break;
                 case PROFILING:
-                    // dump stack
+                    // 拿到 dump 堆栈信息
                     TracingThreadSnapshot snapshot = currentProfiler.buildSnapshot();
                     if (snapshot != null) {
                         profileTaskChannelService.addProfilingSnapshot(snapshot);
@@ -694,8 +717,7 @@ public class ProfileThread implements Runnable {
                     break;
             }
         }
-        // sleep to next period
-        // if out of period, sleep one period
+        // sleep 到下一个执行周期
         long needToSleep = (currentLoopStartTime + maxSleepPeriod) - System.currentTimeMillis();
         needToSleep = needToSleep > 0 ? needToSleep : maxSleepPeriod;
         Thread.sleep(needToSleep);
