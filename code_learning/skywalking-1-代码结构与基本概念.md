@@ -76,7 +76,7 @@ skywalking
 
 ### 3. 基本概念
 
-#### 核心功能
+#### skywalking 核心功能
 
 - APM指标分析
 - 服务拓扑图分析
@@ -104,8 +104,6 @@ Skywalking 中 Trace 的相关概念：
 - reference：表示跨线程、进程父子关系，Reference包含上游的trace ID, segment ID, span ID, service name, service instance name, endpoint name，和客户端的目标地址 （跨线程场景中没有该字段）. reference中的这些字段是通过[Cross Process Propagation Headers Protocol v3](https://skywalking.apache.org/docs/main/next/en/protocols/skywalking-cross-process-propagation-headers-protocol-v3/) 在agent与agent之间传递的。
 
 #### Span 结构
-
-索引结构
 
 在 Elasticsearch 中，span信息存储在 sw_segment 索引中，结构如下：
 
