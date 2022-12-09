@@ -71,3 +71,5 @@ Alt + F8：表达式求值
 Ctrl + /：单行注释
 
 Ctrl + Shift + /：多行注释 
+
+Shift + F6：重命名
