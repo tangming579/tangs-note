@@ -234,3 +234,4 @@ pom依赖：
   辅助SpringBoot接入GraphQL的库，它本身依赖graphql-java和graphql-java-servlet（将GraphQL服务发布为通过HTTP可访问的Web服务，封装了一个GraphQLServlet接收GraphQL请求，并提供Servlet Listeners功能）。
 
 类库的使用可以参考：https://github.com/graphql-java-kickstart
+
