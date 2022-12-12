@@ -6,7 +6,7 @@ github：https://github.com/apache/skywalking
 
 官方文档：https://skywalking.apache.org/docs/main/next/readme/
 
-### 2. 项目结构
+### 2. 项目代码
 
 #### 主服务结构
 
@@ -76,11 +76,11 @@ skywalking
 
 #### 源代码调试
 
-1. 先决条件：git, JDK8+, and Maven 3.6+.
+1. 先决条件：安装 git、JDK8+、Maven 3.6+
 
 2. 使用 git clone 命令下载源码
 
-   ```
+   ```sh
    git clone https://github.com/apache/skywalking.git
    cd skywalking/
    git checkout v8.7.0
@@ -94,21 +94,29 @@ skywalking
 
 5. 打包
 
-   ```
+   ```sh
+   #只处理指定部分的源码 通过-P参数指定：
    mvn clean package -Pagent //只处理 javaAgent部分，这在调试Agent的时候就减少许多时间
    mvn package -Pbackend,dist//只处理OapServer并打包压缩
    mvn package -Pui,dist//只处理UI并打包压缩
    mvn package -Pagent,dist//只处理 javaAgent 并打包压缩
+   
+   #处理全部源码
+   mvn package 
    ```
 
 6. 设置 Genenated Sources Root
+
+   右键文件夹 -> Mark Directory as -> Genenated Sources Root
 
    - `oap-server\server-configuration\grpc-configuration-sync\target\generated-sources\protobuf` 目录下，的 [grpc-java]  和  [java] 
    - `apm-protocol\apm-network\target\generated-sources\protobuf` 目录下，的 [grpc-java] 和  [java] 
    - `oap-server\server-core\target\generated-sources\protobuf` 目录下，的 [grpc-java] 和  [java] 
    - `oap-server/oal-grammar/target/generated-sources/antlr4` 目录下，的 [antlr4]
 
-7. 
+7. 修改 server-bootstrap 的 application.yml 配置，如集群模式、Elasticsearch信息
+
+8. 找到 OAPServerStartUp，直接启动
 
 ### 3. 基本概念
 
