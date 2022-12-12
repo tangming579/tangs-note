@@ -74,6 +74,42 @@ skywalking
 |   `-- skywalking-agent.jar
 ```
 
+#### 源代码调试
+
+1. 先决条件：git, JDK8+, and Maven 3.6+.
+
+2. 使用 git clone 命令下载源码
+
+   ```
+   git clone https://github.com/apache/skywalking.git
+   cd skywalking/
+   git checkout v8.7.0
+   git submodule init
+   git submodule update
+   ```
+
+3. 删除 apm-webapp项目 pom 下的打包plugin
+
+4. 全局搜索删除所有 pom 中的 checkstyle 引用
+
+5. 打包
+
+   ```
+   mvn clean package -Pagent //只处理 javaAgent部分，这在调试Agent的时候就减少许多时间
+   mvn package -Pbackend,dist//只处理OapServer并打包压缩
+   mvn package -Pui,dist//只处理UI并打包压缩
+   mvn package -Pagent,dist//只处理 javaAgent 并打包压缩
+   ```
+
+6. 设置 Genenated Sources Root
+
+   - `oap-server\server-configuration\grpc-configuration-sync\target\generated-sources\protobuf` 目录下，的 [grpc-java]  和  [java] 
+   - `apm-protocol\apm-network\target\generated-sources\protobuf` 目录下，的 [grpc-java] 和  [java] 
+   - `oap-server\server-core\target\generated-sources\protobuf` 目录下，的 [grpc-java] 和  [java] 
+   - `oap-server/oal-grammar/target/generated-sources/antlr4` 目录下，的 [antlr4]
+
+7. 
+
 ### 3. 基本概念
 
 #### skywalking 核心功能
