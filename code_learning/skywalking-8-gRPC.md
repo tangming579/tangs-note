@@ -64,7 +64,6 @@ message Event {
   int64 startTime = 7;
   int64 endTime = 8;
 }
-
 enum Type {
   Normal = 0;
   Error = 1;
@@ -95,7 +94,9 @@ message Commands {
 }
 
 message Command {
+	//取决于代理的实现
     string command = 1;
+    //配置的字符串值对
     repeated KeyStringValuePair args = 2;
 }
 ```
@@ -110,17 +111,26 @@ service JVMMetricReportService {
 
 message JVMMetricCollection {
     repeated JVMMetric metrics = 1;
+    //服务名
     string service = 2;
+    //服务实例名
     string serviceInstance = 3;
 }
 
 message JVMMetric {
+	//生成时间戳
     int64 time = 1;
+    //cpu使用百分比
     CPU cpu = 2;
+    //内存使用情况
     repeated Memory memory = 3;
+    //内存池情况
     repeated MemoryPool memoryPool = 4;
+    //GC回收情况
     repeated GC gc = 5;
+    //线程情况
     Thread thread = 6;
+    //类加载情况
     Class clazz = 7;
 }
 
@@ -178,14 +188,16 @@ message Class {
 
 #### Trace 上报
 
-```
+```protobuf
 service TraceSegmentReportService {
+	//推荐使用的报告方式
     rpc collect (stream SegmentObject) returns (Commands) {
     }
+    //第三方集成提供的，可能影响网络和客户端的性能
     rpc collectInSync (SegmentCollection) returns (Commands) {
     }
 }
-
+//span的集合
 message SegmentObject {
     string traceId = 1;
     string traceSegmentId = 2;
@@ -194,150 +206,42 @@ message SegmentObject {
     string serviceInstance = 5;
     bool isSizeLimited = 6;
 }
-
+//表示两个现有span之间的链接
 message SegmentReference {
-    // Represent the reference type. It could be across thread or across process.
-    // Across process means there is a downstream RPC call for this.
-    // Typically, refType == CrossProcess means SpanObject#spanType = entry.
+    //引用类型，跨线程/跨进程
     RefType refType = 1;
-    // A string id represents the whole trace.
     string traceId = 2;
-    // Another segment id as the parent.
     string parentTraceSegmentId = 3;
-    // The span id in the parent trace segment.
     int32 parentSpanId = 4;
-    // The service logic name of the parent segment.
-    // If refType == CrossThread, this name is as same as the trace segment.
     string parentService = 5;
-    // The service logic name instance of the parent segment.
-    // If refType == CrossThread, this name is as same as the trace segment.
     string parentServiceInstance = 6;
-    // The endpoint name of the parent segment.
-    // **Endpoint**. A path in a service for incoming requests, such as an HTTP URI path or a gRPC service class + method signature.
-    // In a trace segment, the endpoint name is the name of first entry span.
     string parentEndpoint = 7;
-    // The network address, including ip/hostname and port, which is used in the client side.
-    // Such as Client --> use 127.0.11.8:913 -> Server
-    // then, in the reference of entry span reported by Server, the value of this field is 127.0.11.8:913.
-    // This plays the important role in the SkyWalking STAM(Streaming Topology Analysis Method)
-    // For more details, read https://wu-sheng.github.io/STAM/
+
     string networkAddressUsedAtPeer = 8;
 }
 
-// Span represents a execution unit in the system, with duration and many other attributes.
-// Span could be a method, a RPC, MQ message produce or consume.
-// In the practice, the span should be added when it is really necessary, to avoid payload overhead.
-// We recommend to creating spans in across process(client/server of RPC/MQ) and across thread cases only.
+//在实际操作中，为了避免负载开销，需要时才增加span。
+//建议在跨进程(RPC/MQ的客户端/服务器)和跨线程的情况下创建span
 message SpanObject {
-    // The number id of the span. Should be unique in the whole segment.
-    // Starting at 0.
+    // span 的id，在同一个segment中唯一，从0开始
     int32 spanId = 1;
-    // The number id of the parent span in the whole segment.
-    // -1 represents no parent span.
-    // Also, be known as the root/first span of the segment.
+    // 在当前segment中父span的id，如果为-1表示没有父span
     int32 parentSpanId = 2;
-    // Start timestamp in milliseconds of this span,
-    // measured between the current time and midnight, January 1, 1970 UTC.
+    // span开始时间的时间戳
     int64 startTime = 3;
-    // End timestamp in milliseconds of this span,
-    // measured between the current time and midnight, January 1, 1970 UTC.
-    int64 endTime = 4;
-    // <Optional>
-    // In the across thread and across process, these references targeting the parent segments.
-    // The references usually have only one element, but in batch consumer case, such as in MQ or async batch process, it could be multiple.
-    repeated SegmentReference refs = 5;
-    // A logic name represents this span.
-    //
-    // We don't recommend to include the parameter, such as HTTP request parameters, as a part of the operation, especially this is the name of the entry span.
-    // All statistic for the endpoints are aggregated base on this name. Those parameters should be added in the tags if necessary.
-    // If in some cases, it have to be a part of the operation name,
-    // users should use the Group Parameterized Endpoints capability at the backend to get the meaningful metrics.
-    // Read https://github.com/apache/skywalking/blob/master/docs/en/setup/backend/endpoint-grouping-rules.md
-    string operationName = 6;
-    // Remote address of the peer in RPC/MQ case.
-    // This is required when spanType = Exit, as it is a part of the SkyWalking STAM(Streaming Topology Analysis Method).
-    // For more details, read https://wu-sheng.github.io/STAM/
-    string peer = 7;
-    // Span type represents the role in the RPC context.
-    SpanType spanType = 8;
-    // Span layer represent the component tech stack, related to the network tech.
+	// span结束时间的时    // Span 层级，可选值 Unknown、Database、RPCFramework、Http、MQ、Cache
     SpanLayer spanLayer = 9;
-    // Component id is a predefinited number id in the SkyWalking.
-    // It represents the framework, tech stack used by this tracked span, such as Spring.
-    // All IDs are defined in the https://github.com/apache/skywalking/blob/master/oap-server/server-bootstrap/src/main/resources/component-libraries.yml
-    // Send a pull request if you want to add languages, components or mapping defintions,
-    // all public components could be accepted.
-    // Follow this doc for more details, https://github.com/apache/skywalking/blob/master/docs/en/guides/Component-library-settings.md
     int32 componentId = 10;
-    // The status of the span. False means the tracked execution ends in the unexpected status.
-    // This affects the successful rate statistic in the backend.
-    // Exception or error code happened in the tracked process doesn't mean isError == true, the implementations of agent plugin and tracing SDK make the final decision.
+	// span 是否发生异常，影响后台的成功率统计
     bool isError = 11;
-    // String key, String value pair.
-    // Tags provides more informance, includes parameters.
-    //
-    // In the OAP backend analysis, some special tag or tag combination could provide other advanced features.
-    // https://github.com/apache/skywalking/blob/master/docs/en/guides/Java-Plugin-Development-Guide.md#special-span-tags
+	// 字符串键值对，保存一些额外信息
     repeated KeyStringValuePair tags = 12;
-    // String key, String value pair with an accurate timestamp.
-    // Logging some events happening in the context of the span duration.
+    // 日志信息，如异常时获取的堆栈信息
     repeated Log logs = 13;
-    // Force the backend don't do analysis, if the value is TRUE.
-    // The backend has its own configurations to follow or override this.
-    //
-    // Use this mostly because the agent/SDK could know more context of the service role.
+    // 是否跳过分析？
     bool skipAnalysis = 14;
 }
 
-message Log {
-    // The timestamp in milliseconds of this event.,
-    // measured between the current time and midnight, January 1, 1970 UTC.
-    int64 time = 1;
-    // String key, String value pair.
-    repeated KeyStringValuePair data = 2;
-}
-
-// Map to the type of span
-enum SpanType {
-    // Server side of RPC. Consumer side of MQ.
-    Entry = 0;
-    // Client side of RPC. Producer side of MQ.
-    Exit = 1;
-    // A common local code execution.
-    Local = 2;
-}
-
-// A ID could be represented by multiple string sections.
-message ID {
-    repeated string id = 1;
-}
-
-// Type of the reference
-enum RefType {
-    // Map to the reference targeting the segment in another OS process.
-    CrossProcess = 0;
-    // Map to the reference targeting the segment in the same process of the current one, just across thread.
-    // This is only used when the coding language has the thread concept.
-    CrossThread = 1;
-}
-
-// Map to the layer of span
-enum SpanLayer {
-    // Unknown layer. Could be anything.
-    Unknown = 0;
-    // A database layer, used in tracing the database client component.
-    Database = 1;
-    // A RPC layer, used in both client and server sides of RPC component.
-    RPCFramework = 2;
-    // HTTP is a more specific RPCFramework.
-    Http = 3;
-    // A MQ layer, used in both producer and consuer sides of the MQ component.
-    MQ = 4;
-    // A cache layer, used in tracing the cache client component.
-    Cache = 5;
-}
-
-// The segment collections for trace report in batch and sync mode.
 message SegmentCollection {
     repeated SegmentObject segments = 1;
 }
@@ -346,52 +250,32 @@ message SegmentCollection {
 #### Log 上报
 
 ```protobuf
-// Report collected logs into the OAP backend
 service LogReportService {
-    // Recommend to report log data in a stream mode.
-    // The service/instance/endpoint of the log could share the previous value if they are not set.
-    // Reporting the logs of same service in the batch mode could reduce the network cost.
     rpc collect (stream LogData) returns (Commands) {
     }
 }
 
-// Log data is collected through file scratcher of agent.
-// Natively, Satellite provides various ways to collect logs.
+//通过agent的file scratcher收集日志数据。
+//本地，Satellite提供了多种收集日志的方式。
 message LogData {
-    // [Optional] The timestamp of the log, in millisecond.
-    // If not set, OAP server would use the received timestamp as log's timestamp, or relies on the OAP server analyzer.
+	//生成日志的时间戳，如果不传已OAP接收时间为准
     int64 timestamp = 1;
-    // [Required] **Service**. Represents a set/group of workloads which provide the same behaviours for incoming requests.
-    //
-    // The logic name represents the service. This would show as a separate node in the topology.
-    // The metrics analyzed from the spans, would be aggregated for this entity as the service level.
-    //
-    // If this is not the first element of the streaming, use the previous not-null name as the service name.
+    // 服务
     string service = 2;
-    // [Optional] **Service Instance**. Each individual workload in the Service group is known as an instance. Like `pods` in Kubernetes, it
-    // doesn't need to be a single OS process, however, if you are using instrument agents, an instance is actually a real OS process.
-    //
-    // The logic name represents the service instance. This would show as a separate node in the instance relationship.
-    // The metrics analyzed from the spans, would be aggregated for this entity as the service instance level.
+	// 服务实例
     string serviceInstance = 3;
-    // [Optional] **Endpoint**. A path in a service for incoming requests, such as an HTTP URI path or a gRPC service class + method signature.
-    //
-    // The logic name represents the endpoint, which logs belong.
+    // 端点
     string endpoint = 4;
-    // [Required] The content of the log.
+    // 日志内容
     LogDataBody body = 5;
-    // [Optional] Logs with trace context
+    // trace context
     TraceContext traceContext = 6;
-    // [Optional] The available tags. OAP server could provide search/analysis capabilities based on these.
+    // 一些可用的 tags，OAP server 基于此提供查询分析功能
     LogTags tags = 7;
 }
 
-// The content of the log data
 message LogDataBody {
-    // A type to match analyzer(s) at the OAP server.
-    // The data could be analyzed at the client side, but could be partial
     string type = 1;
-    // Content with extendable format.
     oneof content {
         TextLog text = 2;
         JSONLog json = 3;
@@ -399,29 +283,21 @@ message LogDataBody {
     }
 }
 
-// Literal text log, typically requires regex or split mechanism to filter meaningful info.
 message TextLog {
     string text = 1;
 }
 
-// JSON formatted log. The json field represents the string that could be formatted as a JSON object.
 message JSONLog {
     string json = 1;
 }
 
-// YAML formatted log. The yaml field represents the string that could be formatted as a YAML map.
 message YAMLLog {
     string yaml = 1;
 }
 
-// Logs with trace context, represent agent system has injects context(IDs) into log text.
 message TraceContext {
-    // [Optional] A string id represents the whole trace.
     string traceId = 1;
-    // [Optional] A unique id represents this segment. Other segments could use this id to reference as a child segment.
     string traceSegmentId = 2;
-    // [Optional] The number id of the span. Should be unique in the whole segment.
-    // Starting at 0.
     int32 spanId = 3;
 }
 
@@ -434,15 +310,12 @@ message LogTags {
 #### 服务信息上报
 
 ```protobuf
-// Define the service reporting the extra information of the instance.
 service ManagementService {
-    // Report custom properties of a service instance.
+    // 上报服务实例及相关属性信息
     rpc reportInstanceProperties (InstanceProperties) returns (Commands) {
     }
-
-    // Keep the instance alive in the backend analysis.
-    // Only recommend to do separate keepAlive report when no trace and metrics needs to be reported.
-    // Otherwise, it is duplicated.
+	//在后台保证实例存活
+	//只有在不需要报告跟踪和度量时，才建议单独做keepAlive报告。
     rpc keepAlive (InstancePingPkg) returns (Commands) {
 
     }
@@ -464,56 +337,41 @@ message InstancePingPkg {
 
 ```protobuf
 service ProfileTask {
-
-    // query all sniffer need to execute profile task commands
+    // 获取所有的性能剖析任务
     rpc getProfileTaskCommands (ProfileTaskCommandQuery) returns (Commands) {
     }
-
-    // collect dumped thread snapshot
+    // 收集线程堆栈快照
     rpc collectSnapshot (stream ThreadSnapshot) returns (Commands) {
     }
-
-    // report profiling task finished
+    // 上报性能剖析任务已完成
     rpc reportTaskFinish (ProfileTaskFinishReport) returns (Commands) {
     }
-
 }
 
 message ProfileTaskCommandQuery {
-    // current sniffer information
     string service = 1;
     string serviceInstance = 2;
-
-    // last command timestamp
     int64 lastCommandTime = 3;
 }
 
-// dumped thread snapshot
 message ThreadSnapshot {
-    // profile task id
     string taskId = 1;
-    // dumped segment id
     string traceSegmentId = 2;
-    // dump timestamp
     int64 time = 3;
-    // snapshot dump sequence, start with zero
+    // dump 快照的序列
     int32 sequence = 4;
-    // snapshot stack
+    // 保存快照的 stack
     ThreadStack stack = 5;
 }
 
 message ThreadStack {
-    // stack code signature list
     repeated string codeSignatures = 1;
 }
 
-// profile task finished report
 message ProfileTaskFinishReport {
-    // current sniffer information
     string service = 1;
     string serviceInstance = 2;
-
-    // profile task
+    // 性能剖析任务id
     string taskId = 3;
 }
 ```
