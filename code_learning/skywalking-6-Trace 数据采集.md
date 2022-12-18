@@ -1,13 +1,13 @@
 ### 概念回顾
 
+- traceId: 在一个 `链路` 中 `traceId` 唯一
+- segmentId : 同一个 `线程链路`中，这个值都是相同的，不同线程链路中这个值不同
 - spanId : 同一个线程中唯一, 从0始，按照调用链路从0递增
 - parentSpanId : 在同一个`线程的链路`中，用来连接 `span`
-- segmentId : 同一个 `线程链路`中，这个值都是相同的，不同线程链路中这个值不同
-- traceId: 在一个 `链路` 中 `traceId` 唯一
 
 ### TracingContext 类详解
 
- TracingContext表示核心跟踪逻辑控制器
+ TracingContext 是链路跟踪逻辑核心控制器。在 Open Tracing 概念中， 所有在 segment 中的 span 应该都是父子关系。
 
 位置：apm-sniffer/apm-agent-core/context/TracingContext.java
 
