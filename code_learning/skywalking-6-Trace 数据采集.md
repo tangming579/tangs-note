@@ -11,18 +11,19 @@
 
 位置：apm-sniffer/apm-agent-core/context/TracingContext.java
 
+#### AbstractTracerContext
+
 TracingContext 继承 AbstractTracerContext，先看一下AbstractTracerContext：
 
 ```java
 public interface AbstractTracerContext {
-    /**
-     * Prepare for the cross-process propagation. How to initialize the carrier, depends on the implementation.
-     *
-     * @param carrier to carry the context for crossing process.
+	/**
+     * 将 carrier 信息跨进程传递
      */
     void inject(ContextCarrier carrier);
+    
     /**
-     * 在当前segment 和跨进程的segment 建构建引用
+     * 解出跨进程传递的 carrier
      */
     void extract(ContextCarrier carrier);
 
@@ -81,11 +82,19 @@ public interface AbstractTracerContext {
 - 跨进程传播上下文
 - 跨线程传播上下文
 
-跨进程传播 Context 信息流程
+#### 跨进程传播
 
 1. 远程调用的 Client 端会调用 `inject(ContextCarrier)`方法，将当前 `TracingContext`中记录的 `Trace` 上下文信息填充到传入的`ContextCarrier` 对象。
 2. 后续 Client 端的插件会将 `ContextCarrier` 对象序列化成字符串并将其作为附加信息添加到请求中，这样，`ContextCarrier` 字符串就会和请求一并到达 Server 端。
 3. Server 端接收请求的插件会检查请求中是否携带了 `ContextCarrier`字符串，如果存在 `ContextCarrier` 字符串，就会将其进行反序列化，然后调用`extract()`方法从 `ContextCarrier` 对象中取出 Context 上下文信息，填充到当前 `TracingContext`（以及 `TraceSegmentRef`) 中。
+
+#### 跨线程转播
+
+跨线程转播，是在同一个进程中，不同的线程之间传递，这个传递过程不需要序列化，遵循以下步骤实现：
+
+- 调用`ContextManager#capture` 方法获取`ContextSnapshot`对象
+- 把这个`ContextSnapshot`对象传递给子线程
+- 在子线程中调用`ContextManager#continued(ContextSnapshot snapshot)`方法
 
 ### Span 的创建
 
@@ -160,6 +169,81 @@ public void beforeMethod(EnhancedInstance objInst, Method method, Object[] allAr
 
 ### Span 数据发送
 
+发送`span` 数据不能够阻塞业务线程，而且是等到积累了有一定的数据量，批量发送。所以 `skywalking` 使用了 `生产-消费` 的模型
+
 #### 生产者
 
+每当一个方法结束后，都需要调用一下 `ContextManager.stopSpan()` 方法，这个方法就是 将 `span`塞入队列的 方法
+
+```java
+private void finish() {
+    if (isRunningInAsyncMode) {
+        asyncFinishLock.lock();
+    }
+    try {
+        boolean isFinishedInMainThread = activeSpanStack.isEmpty() && running;
+        if (isFinishedInMainThread) {
+            // 通知所有注册了的 listener，本TraceSegment成功结束了
+            // 其中TraceSegmentServiceClient 的listener 收到这个事件后，会把 TraceSegment 放入队列 等待消费
+            TracingThreadListenerManager.notifyFinish(this);
+        }
+        if (isFinishedInMainThread && (!isRunningInAsyncMode || asyncSpanCounter == 0)) {
+            TraceSegment finishedSegment = segment.finish(isLimitMechanismWorking());
+            TracingContext.ListenerManager.notifyFinish(finishedSegment);
+            running = false;
+        }
+    } finally {
+        if (isRunningInAsyncMode) {
+            asyncFinishLock.unlock();
+        }
+    }
+}
+```
+
 #### 消费者
+
+agent 启动的时候会去加载模块 `apm-agent-core` 中的 `TraceSegmentServiceClient`
+
+TraceSegmentServiceClient 中 `boot`方法
+
+```java
+@Override
+public void boot() {
+    lastLogTime = System.currentTimeMillis();
+    segmentUplinkedCounter = 0;
+    segmentAbandonedCounter = 0;
+    carrier = new DataCarrier<>(CHANNEL_SIZE, BUFFER_SIZE, BufferStrategy.IF_POSSIBLE);
+    //定义了消费者，Trace 的数据将会由这个消费者去发送给 skywalking,这里传了 this 消费者就是自己
+    //参数2 定义了有几个消费线程，每个线程会持有不同的队列
+    carrier.consume(this, 1);
+}
+```
+
+TraceSegmentServiceClient 的 `consume`方法：
+
+```java
+ @Override
+    public void consume(List<TraceSegment> data) {
+        if (CONNECTED.equals(status)) {
+            final GRPCStreamServiceStatus status = new GRPCStreamServiceStatus(false);
+            StreamObserver<UpstreamSegment> upstreamSegmentStreamObserver = serviceStub.withDeadlineAfter(
+                Config.Collector.GRPC_UPSTREAM_TIMEOUT, TimeUnit.SECONDS
+            ).collect(new StreamObserver<Commands>() {..GRPC 的一些回调..});
+
+            for (TraceSegment segment : data) {
+           			//转换一下 segment 成 proto 数据
+                    UpstreamSegment upstreamSegment = segment.transform();
+                    //GRPC 发送
+                    upstreamSegmentStreamObserver.onNext(upstreamSegment);
+            }
+			//告诉 GRPC 流已经完全写入进去了，等待他全部把数据发送后会回调上面的 StreamObserver定义的回调方法
+            upstreamSegmentStreamObserver.onCompleted();
+
+            status.wait4Finish();
+            segmentUplinkedCounter += data.size();
+        } else {
+            segmentAbandonedCounter += data.size();
+        }
+    }
+```
+
