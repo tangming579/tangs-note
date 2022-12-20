@@ -157,3 +157,80 @@ disable(segment);
 disable(endpoint_relation_server_side);
 disable(top_n_database_statement);
 ```
+
+### Skywalking 中的OAL文件
+
+#### core.oal
+
+```
+/ All scope metrics
+all_percentile = from(All.latency).percentile(10);  // Multiple values including p50, p75, p90, p95, p99
+all_heatmap = from(All.latency).histogram(100, 20); //
+
+// Service scope metrics 服务
+service_resp_time = from(Service.latency).longAvg(); // 服务的平均响应时间
+service_sla = from(Service.*).percent(status == true); // 服务的请求成功率
+service_cpm = from(Service.*).cpm(); //服务的每分钟调用次数
+service_percentile = from(Service.latency).percentile(10); // Multiple values including p50, p75, p90, p95, p99
+service_apdex = from(Service.latency).apdex(name, status); // 服务的应用性能指标，apdex的衡量的是衡量满意的响应时间与不满意的响应时间的比率，默认的请求满意时间是500ms
+
+// Service relation scope metrics for topology 服务与服务间调用的调用度量指标
+service_relation_client_cpm = from(ServiceRelation.*).filter(detectPoint == DetectPoint.CLIENT).cpm();//在客户端检测到的每分钟调用次数
+service_relation_server_cpm = from(ServiceRelation.*).filter(detectPoint == DetectPoint.SERVER).cpm();//在服务端检测到的每分钟调用的次数
+service_relation_client_call_sla = from(ServiceRelation.*).filter(detectPoint == DetectPoint.CLIENT).percent(status == true);//在客户端检测到成功率
+service_relation_server_call_sla = from(ServiceRelation.*).filter(detectPoint == DetectPoint.SERVER).percent(status == true);//在服务端检测到的成功率
+service_relation_client_resp_time = from(ServiceRelation.latency).filter(detectPoint == DetectPoint.CLIENT).longAvg();//在客户端检测到的平均响应时间
+service_relation_server_resp_time = from(ServiceRelation.latency).filter(detectPoint == DetectPoint.SERVER).longAvg();//在服务端检测到的平均响应时间
+service_relation_client_percentile = from(ServiceRelation.latency).filter(detectPoint == DetectPoint.CLIENT).percentile(10); // Multiple values including p50, p75, p90, p95, p99
+service_relation_server_percentile = from(ServiceRelation.latency).filter(detectPoint == DetectPoint.SERVER).percentile(10); // Multiple values including p50, p75, p90, p95, p99
+
+// Service Instance relation scope metrics for topology 服务实例与服务实例之间的调用度量指标
+service_instance_relation_client_cpm = from(ServiceInstanceRelation.*).filter(detectPoint == DetectPoint.CLIENT).cpm();//在客户端实例检测到的每分钟调用次数
+service_instance_relation_server_cpm = from(ServiceInstanceRelation.*).filter(detectPoint == DetectPoint.SERVER).cpm();//在服务端实例检测到的每分钟调用次数
+service_instance_relation_client_call_sla = from(ServiceInstanceRelation.*).filter(detectPoint == DetectPoint.CLIENT).percent(status == true);//在客户端实例检测到的成功率
+service_instance_relation_server_call_sla = from(ServiceInstanceRelation.*).filter(detectPoint == DetectPoint.SERVER).percent(status == true);//在服务端实例检测到的成功率
+service_instance_relation_client_resp_time = from(ServiceInstanceRelation.latency).filter(detectPoint == DetectPoint.CLIENT).longAvg();//在客户端实例检测到的平均响应时间
+service_instance_relation_server_resp_time = from(ServiceInstanceRelation.latency).filter(detectPoint == DetectPoint.SERVER).longAvg();//在服务端实例检测到的平均响应时间
+service_instance_relation_client_percentile = from(ServiceInstanceRelation.latency).filter(detectPoint == DetectPoint.CLIENT).percentile(10); // Multiple values including p50, p75, p90, p95, p99
+service_instance_relation_server_percentile = from(ServiceInstanceRelation.latency).filter(detectPoint == DetectPoint.SERVER).percentile(10); // Multiple values including p50, p75, p90, p95, p99
+
+// Service Instance Scope metrics
+service_instance_sla = from(ServiceInstance.*).percent(status == true);//服务实例的成功率
+service_instance_resp_time= from(ServiceInstance.latency).longAvg();//服务实例的平均响应时间
+service_instance_cpm = from(ServiceInstance.*).cpm();//服务实例的每分钟调用次数
+
+// Endpoint scope metrics
+endpoint_cpm = from(Endpoint.*).cpm();//端点的每分钟调用次数
+endpoint_avg = from(Endpoint.latency).longAvg();//端口平均响应时间
+endpoint_sla = from(Endpoint.*).percent(status == true);//端点的成功率
+endpoint_percentile = from(Endpoint.latency).percentile(10); // Multiple values including p50, p75, p90, p95, p99
+
+// Endpoint relation scope metrics
+endpoint_relation_cpm = from(EndpointRelation.*).filter(detectPoint == DetectPoint.SERVER).cpm();//在服务端端点检测到的每分钟调用次数
+endpoint_relation_resp_time = from(EndpointRelation.rpcLatency).filter(detectPoint == DetectPoint.SERVER).longAvg();//在服务端检测到的rpc调用的平均耗时
+endpoint_relation_sla = from(EndpointRelation.*).filter(detectPoint == DetectPoint.SERVER).percent(status == true);//在服务端检测到的请求成功率
+endpoint_relation_percentile = from(EndpointRelation.rpcLatency).filter(detectPoint == DetectPoint.SERVER).percentile(10); // Multiple values including p50, p75, p90, p95, p99
+
+database_access_resp_time = from(DatabaseAccess.latency).longAvg();//数据库的处理平均响应时间
+database_access_sla = from(DatabaseAccess.*).percent(status == true);//数据库的请求成功率
+database_access_cpm = from(DatabaseAccess.*).cpm();//数据库的每分钟调用次数
+database_access_percentile = from(DatabaseAccess.latency).percentile(10);
+```
+
+#### java-agent.oal
+
+```
+// JVM instance metrics
+instance_jvm_cpu = from(ServiceInstanceJVMCPU.usePercent).doubleAvg();//jvm 平均cpu耗时百分比
+instance_jvm_memory_heap = from(ServiceInstanceJVMMemory.used).filter(heapStatus == true).longAvg();//jvm 堆空间的平均使用空间
+instance_jvm_memory_noheap = from(ServiceInstanceJVMMemory.used).filter(heapStatus == false).longAvg();//jvm 非堆空间的平均使用空间
+instance_jvm_memory_heap_max = from(ServiceInstanceJVMMemory.max).filter(heapStatus == true).longAvg();//jvm 最大堆内存的平均值
+instance_jvm_memory_noheap_max = from(ServiceInstanceJVMMemory.max).filter(heapStatus == false).longAvg();//jvm 最大非堆内存的平均值
+instance_jvm_young_gc_time = from(ServiceInstanceJVMGC.time).filter(phrase == GCPhrase.NEW).sum();//年轻代gc的耗时
+instance_jvm_old_gc_time = from(ServiceInstanceJVMGC.time).filter(phrase == GCPhrase.OLD).sum();//老年代gc的耗时
+instance_jvm_young_gc_count = from(ServiceInstanceJVMGC.count).filter(phrase == GCPhrase.NEW).sum();//年轻代gc的次数
+instance_jvm_old_gc_count = from(ServiceInstanceJVMGC.count).filter(phrase == GCPhrase.OLD).sum();//老年代gc的次数
+instance_jvm_thread_live_count = from(ServiceInstanceJVMThread.liveCount).longAvg();//存活的线程数
+instance_jvm_thread_daemon_count = from(ServiceInstanceJVMThread.daemonCount).longAvg();//守护线程数
+instance_jvm_thread_peak_count = from(ServiceInstanceJVMThread.peakCount).longAvg();//峰值线程数
+```

@@ -64,6 +64,51 @@ worker中可能存在remoteworker，会将数据发往其他oapServer进行处�
 
 - IDriver 消费者的驱动。 主要是驱动消费者如何消费的。
 
+初始化：
+
+```java
+public DataCarrier(String name, String envPrefix, int channelSize, int bufferSize)
+```
+
+生产数据：
+
+```java
+public boolean produce(T data) {
+    if (driver != null) {
+        if (!driver.isRunning(channels)) {
+            return false;
+        }
+    }
+    return this.channels.save(data);
+}
+```
+
+交由Channel保存数据：
+
+```java
+public boolean save(T data) {
+    int index = dataPartitioner.partition(bufferChannels.length, data);
+    int retryCountDown = 1;
+    if (BufferStrategy.IF_POSSIBLE.equals(strategy)) {
+        int maxRetryCount = dataPartitioner.maxRetryCount();
+        if (maxRetryCount > 1) {
+            retryCountDown = maxRetryCount;
+        }
+    }
+    for (; retryCountDown > 0; retryCountDown--) {
+        if (bufferChannels[index].save(data)) {
+            return true;
+        }
+    }
+    return false;
+}
+```
+
+生产和消费主要有两种情况
+
+- 生产端多，消费端少的情况。 此时每个消费端线程会消费多个队列。典型worker MetricsAggregateWorker，用来处理全部metrics的，此时生产端的数据比较多
+- 生产端少，消费端多的情况。此时每个消费端线程会消费队列中的一部分。典型worker TopNWorker
+
 ### Agent 端：建立连接与服务注册
 
 1. java 服务启动，执行 - javaagent，进入agent 中的`premain()`方法，在方法中执行 `ServiceManager.INSTANCE.boot()` 启动插件服务
@@ -283,8 +328,6 @@ public class MetricsAggregateWorker extends AbstractWorker<Metrics> {
 }
 ```
 
-
-
 关于持久化，由PersistenceTimer定义了一个任务，每次批量的从dataCarrier中消费缓存的metrics，并最终持久化到存储中。
 
 ```java
@@ -308,7 +351,7 @@ public enum PersistenceTimer {
     private void extractDataAndSave(IBatchDAO batchDAO) {
 		long startTime = System.currentTimeMillis();
         try (HistogramMetrics.Timer allTimer = allLatency.createTimer()) {
-            // 找到需要的 worker
+            // 找到需要执行持久化的 worker
             List<PersistenceWorker<? extends StorageData>> persistenceWorkers = new ArrayList<>();
             persistenceWorkers.addAll(TopNStreamProcessor.getInstance().getPersistentWorkers());
             persistenceWorkers.addAll(MetricsStreamProcessor.getInstance().getPersistentWorkers());
@@ -321,6 +364,7 @@ public enum PersistenceTimer {
                         // 预处理阶段
                         try (HistogramMetrics.Timer timer = prepareLatency.createTimer()) {
                             // worker 中包含 dataCarrier
+                            // 从Cache里读取数据，构建通用的批量持久化数据对象
                             innerPrepareRequests = worker.buildBatchRequests();
                             worker.endOfRound();
                         } catch (Throwable e) {
