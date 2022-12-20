@@ -74,7 +74,7 @@ skywalking
 |   `-- skywalking-agent.jar
 ```
 
-#### 源代码调试
+#### 源代码编译
 
 1. 先决条件：安装 git、JDK8+、Maven 3.6+
 
@@ -88,9 +88,9 @@ skywalking
    git submodule update
    ```
 
-3. 删除 apm-webapp项目 pom 下的打包plugin
+3. 忽略前端：删除 apm-webapp项目 pom 下的打包plugin
 
-4. 全局搜索删除所有 pom 中的 checkstyle 引用
+4. 忽略代码规范检查：全局搜索删除所有 pom 中的 checkstyle 引用
 
 5. 打包
 
@@ -281,7 +281,7 @@ Endpoint Successful Rate：请求成功率
 
 ### 4. 数据存储结构
 
-Skywalking AOP服务端采用模块化开放方式，在Storage模块，支持多种数据库存储，通过Selector配置来确定选择哪种存储方式,不配置的情况下默认H2
+Skywalking AOP服务端采用模块化开放方式，在Storage模块，支持多种数据库存储，通过Selector配置来确定选择哪种存储方式，不配置的情况下默认H2
 
 官方推荐使用Es内存数据库作为存储，如果要支持Oracle, Mysql需要加载特定的包到服务器。
 
@@ -300,19 +300,19 @@ Skywalking AOP服务端采用模块化开放方式，在Storage模块，支持�
 
 #### 指标类索引
 
-| 索引名称              | 说明                                                    |
-| --------------------- | ------------------------------------------------------- |
-| sw_metrics-apdex      | 服务apdex分值信息                                       |
-| sw_metrics-count      | 记录服务事件                                            |
-| sw_metrics-cpm        | 服务、端点每分钟请求数（cpm）                           |
-| sw_metrics-doubleavg  | jvm实例cpu占用率                                        |
-| sw_metrics-histogram  | 热力图                                                  |
-| sw_metrics-longavg    | 端点平均耗时、端点响应时间、jvm实例 memory_heap使用内存 |
-| sw_metrics-max        | 最大值统计                                              |
-| sw_metrics-percent    | 服务、端点的请求成功率（sla）                           |
-| sw_metrics-percentile | 服务、端点百分位数                                      |
-| sw_metrics-rate       | 比率                                                    |
-| sw_metrics-sum        | jvm实例 YoungGC 和 OldGC 耗时、次数                     |
+| 索引名称              | 说明                                                         |
+| --------------------- | ------------------------------------------------------------ |
+| sw_metrics-apdex      | 服务apdex分值信息                                            |
+| sw_metrics-count      | 记录服务事件                                                 |
+| sw_metrics-cpm        | 服务、端点每分钟请求数（cpm）                                |
+| sw_metrics-doubleavg  | double类型的平均值，如jvm实例cpu占用率                       |
+| sw_metrics-histogram  | 热力图                                                       |
+| sw_metrics-longavg    | long类型的平均值，如端点平均耗时、端点响应时间、jvm实例 memory_heap使用内存 |
+| sw_metrics-max        | 最大值统计                                                   |
+| sw_metrics-percent    | 服务、端点的请求成功率（sla）                                |
+| sw_metrics-percentile | 服务、端点百分位数                                           |
+| sw_metrics-rate       | 比率                                                         |
+| sw_metrics-sum        | jvm实例 YoungGC 和 OldGC 耗时、次数                          |
 
 #### 性能剖析
 

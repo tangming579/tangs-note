@@ -7,15 +7,85 @@
 
 ### TracingContext 类详解
 
- TracingContext 是链路跟踪逻辑核心控制器。在 Open Tracing 概念中， 所有在 segment 中的 span 应该都是父子关系。
+ TracingContext 是链路跟踪逻辑核心控制器。
 
 位置：apm-sniffer/apm-agent-core/context/TracingContext.java
 
+TracingContext 继承 AbstractTracerContext，先看一下AbstractTracerContext：
+
+```java
+public interface AbstractTracerContext {
+    /**
+     * Prepare for the cross-process propagation. How to initialize the carrier, depends on the implementation.
+     *
+     * @param carrier to carry the context for crossing process.
+     */
+    void inject(ContextCarrier carrier);
+    /**
+     * 在当前segment 和跨进程的segment 建构建引用
+     */
+    void extract(ContextCarrier carrier);
+
+    /**
+     * 捕获跨线程的快照
+     */
+    ContextSnapshot capture();
+
+    /**
+     * 在当前segment 和跨线程的segment 建构建引用
+     */
+    void continued(ContextSnapshot snapshot);
+
+    /**
+     * 获取全局traceId
+     */
+    String getReadablePrimaryTraceId();   
+
+    /**
+     * 创建 entry span
+     */
+    AbstractSpan createEntrySpan(String operationName);
+
+    /**
+     * 创建 local span
+     */
+    AbstractSpan createLocalSpan(String operationName);
+
+    /**
+     * 创建 exit span
+     */
+    AbstractSpan createExitSpan(String operationName, String remotePeer);
+
+    /**
+     * 返回当前trace上下文活跃的span
+     */
+    AbstractSpan activeSpan();
+
+    /**
+     * 完成给定的 span, 给定的span应该是当前上下文活跃的span
+     */
+    boolean stopSpan(AbstractSpan span);
+
+    /**
+     * 通知此上下文，当前span将在另一个线程中异步完成
+     */
+    AbstractTracerContext awaitFinishAsync();
+}
 ```
 
-```
+每个 `TraceSegment` 都绑定一个 `TracingContext`上下文对象，记录了 `TraceSegment` 的上下文信息。
+提供的功能有：
 
+- 管理 `TraceSegment`生命周期
+- 创建`Span` 比如三个创建Span的方法`createEntrySpan`、`createLocalSpan` 方法、`createExitSpan`
+- 跨进程传播上下文
+- 跨线程传播上下文
 
+跨进程传播 Context 信息流程
+
+1. 远程调用的 Client 端会调用 `inject(ContextCarrier)`方法，将当前 `TracingContext`中记录的 `Trace` 上下文信息填充到传入的`ContextCarrier` 对象。
+2. 后续 Client 端的插件会将 `ContextCarrier` 对象序列化成字符串并将其作为附加信息添加到请求中，这样，`ContextCarrier` 字符串就会和请求一并到达 Server 端。
+3. Server 端接收请求的插件会检查请求中是否携带了 `ContextCarrier`字符串，如果存在 `ContextCarrier` 字符串，就会将其进行反序列化，然后调用`extract()`方法从 `ContextCarrier` 对象中取出 Context 上下文信息，填充到当前 `TracingContext`（以及 `TraceSegmentRef`) 中。
 
 ### Span 的创建
 
