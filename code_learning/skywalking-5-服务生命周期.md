@@ -1,12 +1,68 @@
 ## skywalking 服务生命周期
 
-### 概念介绍：OAP 的分布式计算
+### 概念
 
-Skywalking 中需要计算的数据类型：
+#### StreamProcessor
 
-- Record数据，即明细数据，如Trace、访问日志等数据，由`RecordStreamProcessor`进行处理。
-- Metrisc数据，即指标数据，绝大部分的OAL指标都会生成这种数据，由`MetricsStreamProcessor`进行处理。
-- TopN数据，即周期性采样数据，如慢SQL的周期性采集，由`TopNStreamProcessor`进行处理。
+Skywalking 中的流式处理，StreamProcessor内含有一个worker责任链，数据在worker节点之间流动处理，所以称为流式处理。
+
+```java
+public interface StreamProcessor<STREAM> {
+	// 进行流式处理，主要就是执行 worker 的in 方法
+    void in(STREAM stream);
+	// 主要是创建 worker 责任链
+    void create(ModuleDefineHolder moduleDefineHolder, Stream stream, Class<? extends STREAM> streamClass) throws StorageException;
+}
+```
+
+StreamProcessor 共有5个实现类：
+
+- `RecordStreamProcessor`：即明细数据，如Trace、访问日志等数据
+- `MetricsStreamProcessor`：即指标数据，绝大部分的OAL指标都会生成这种数据
+- `TopNStreamProcessor`：TopN数据，即周期性采样数据，如慢SQL的周期性采集
+- `ManagementStreamProcessor`：UI/CLI交互数据，数据量和实效性要求不高
+- `NoneStreamProcessor`：界面配置操作相关数据，如性能剖析任务
+
+#### AbstractWorker
+
+用于数据在节点直接流动处理
+
+```java
+public abstract class AbstractWorker<INPUT> {
+
+    @Getter
+    private final ModuleDefineHolder moduleDefineHolder;
+
+    public AbstractWorker(ModuleDefineHolder moduleDefineHolder) {
+        this.moduleDefineHolder = moduleDefineHolder;
+    }
+
+    /**
+     * worker 的主入口
+     * 主要实现是将数据写入数据库或放入dataCarrier中
+     */
+    public abstract void in(INPUT input);
+}
+```
+
+worker中可能存在remoteworker，会将数据发往其他oapServer进行处理，remoteWorker之前的worker工作一般称为L1聚合，remoteWorker之后的worker工作一般称为L2聚合，worker名称会指明是L1还是L2。
+
+#### DataCarrier
+
+说明：基于生产者消费者的模式，维护了一个本地的轻量级消息队列模型
+
+目标：防止收集方生成数据速度大于往后端发送数据速度造成的数据积压和生成方阻塞
+
+核心成员：
+
+- DataCarrier 主要类型，针对内存消息队列的操作都是以这个类为入口的。 该类持有了 `Channels` 和 `IDriver`
+- Channels 数据通道集合，用于针对数据的存取操作。主要有以下属性：
+  - bufferChannels 数据的存取操作
+  - dataPartitioner 定义了数据分区逻辑
+  - strategy 缓存数据的策略
+  - size 总容量
+
+- IDriver 消费者的驱动。 主要是驱动消费者如何消费的。
 
 ### Agent 端：建立连接与服务注册
 
@@ -126,7 +182,7 @@ public void reportInstanceProperties(final InstanceProperties request,
 }
 ```
 
-
+sourceReceiver.receive方法：
 
 ```java
 public class SourceReceiverImpl implements SourceReceiver {
@@ -140,31 +196,20 @@ public class SourceReceiverImpl implements SourceReceiver {
 }
 ```
 
-
+dispatcherManager.forward
 
 ```java
 public class DispatcherManager implements DispatcherDetectorListener {
-
     private static final Logger LOGGER = LoggerFactory.getLogger(DispatcherManager.class);
-
     private Map<Integer, List<SourceDispatcher>> dispatcherMap;
-
     public DispatcherManager() {
         this.dispatcherMap = new HashMap<>();
     }
-
     public void forward(ISource source) {
         if (source == null) {
             return;
         }
-
-        List<SourceDispatcher> dispatchers = dispatcherMap.get(source.scope());
-
-        /**
-         * Dispatcher  oal script analysis result.
-         * So these will/could be possible, the given source doesn't have the dispatcher,
-         * when the receiver is open, and oal script doesn't ask for analysis.
-         */
+        List<SourceDispatcher> dispatchers = dispatcherMap.get(source.scope());        
         if (dispatchers != null) {
             source.prepare();
             // DispatcherManager会对Source进行分发
@@ -175,17 +220,14 @@ public class DispatcherManager implements DispatcherDetectorListener {
     }
 
     /**
-     * Scan all classes under `org.apache.skywalking` package,
-     * <p>
-     * If it implement {@link org.apache.skywalking.oap.server.core.analysis.SourceDispatcher}, then, it will be added
-     * into this DispatcherManager based on the Source definition.
+     * 扫描所有在 org.apache.skywalking 下的包
+     * 将实现 SourceDispatcher 接口的类添加
      */
     public void scan() throws IOException, IllegalAccessException, InstantiationException {
         ClassPath classpath = ClassPath.from(this.getClass().getClassLoader());
         ImmutableSet<ClassPath.ClassInfo> classes = classpath.getTopLevelClassesRecursive("org.apache.skywalking");
         for (ClassPath.ClassInfo classInfo : classes) {
             Class<?> aClass = classInfo.load();
-
             addIfAsSourceDispatcher(aClass);
         }
     }
@@ -193,7 +235,7 @@ public class DispatcherManager implements DispatcherDetectorListener {
 
 ```
 
-
+dispatcher.dispatch
 
 ```java
 public class InstanceUpdateDispatcher implements SourceDispatcher<ServiceInstanceUpdate> {
@@ -212,7 +254,7 @@ public class InstanceUpdateDispatcher implements SourceDispatcher<ServiceInstanc
 }
 ```
 
-
+其实就是调用了 MetricsAggregateWorker 的 in：
 
 ```java
 public class MetricsStreamProcessor implements StreamProcessor<Metrics> {
@@ -226,7 +268,7 @@ public class MetricsStreamProcessor implements StreamProcessor<Metrics> {
 }
 ```
 
-实际上就是把metrics放到缓存里了：
+MetricsAggregateWorker 实际上就是把metrics放到缓存里了：
 
 ```java
 public class MetricsAggregateWorker extends AbstractWorker<Metrics> {
@@ -241,11 +283,15 @@ public class MetricsAggregateWorker extends AbstractWorker<Metrics> {
 }
 ```
 
+
+
 关于持久化，由PersistenceTimer定义了一个任务，每次批量的从dataCarrier中消费缓存的metrics，并最终持久化到存储中。
 
 ```java
 public enum PersistenceTimer {
     public void start(ModuleManager moduleManager, CoreModuleConfig moduleConfig) {
+        // 找到批量插入的 DAO
+        IBatchDAO batchDAO = moduleManager.find(StorageModule.NAME).provider().getService(IBatchDAO.class);
         prepareExecutorService = Executors.newFixedThreadPool(moduleConfig.getPrepareThreads());
         if (!isStarted) {
             // 默认值 25, 25秒执行一次数据的批量存储
@@ -262,6 +308,7 @@ public enum PersistenceTimer {
     private void extractDataAndSave(IBatchDAO batchDAO) {
 		long startTime = System.currentTimeMillis();
         try (HistogramMetrics.Timer allTimer = allLatency.createTimer()) {
+            // 找到需要的 worker
             List<PersistenceWorker<? extends StorageData>> persistenceWorkers = new ArrayList<>();
             persistenceWorkers.addAll(TopNStreamProcessor.getInstance().getPersistentWorkers());
             persistenceWorkers.addAll(MetricsStreamProcessor.getInstance().getPersistentWorkers());
