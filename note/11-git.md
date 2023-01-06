@@ -88,3 +88,11 @@ git reset  052e            # 回退到指定版本
 4. git stash clear
 ```
 
+ 将dev分支的代码完全覆盖到master上。
+
+```
+git checkout master 
+git reset --hard dev 
+git push origin master --force
+```
+
