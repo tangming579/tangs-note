@@ -78,7 +78,24 @@ cat split_file* > gitlab.tar.gz
 
 ##### cat（concatenate）
 
-一次性在终端中显示文件的所有内容
+连接文件并打印到标准输出设备上
+
+```
+cat > Testfile.txt  --- 创建一个名为Testfile.txt，输入内容后退出
+cat test2.txt >test3.txt  --- 把test2.txt的内容替换到test3.txt
+cat Testfile.txt >> test4.txt  --- 把Testfile.txt文件内容添加到test4.txt文件的末尾
+
+cat <<EOF | tee istio.yaml
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: "default"
+  namespace: "istio-system"
+spec:
+  mtls:
+    mode: STRICT
+EOF
+```
 
 ##### more
 
