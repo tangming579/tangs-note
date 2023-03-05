@@ -644,9 +644,13 @@ https://www.cnblogs.com/aspirant/p/7200523.html
 
    并发GC，减少停顿时间，但是会占用更多CPU资源和用户争抢线程，基于标记-清除算法，可能产生内存碎片化问题，因此长时间后会触发full GC，而full GC停顿时间是很长的。
 
-5. **G1 GC**
+5. **G1 GC（Garbage First）**
 
-   兼顾吞吐量和停顿时间，JDK9以后的默认GC。G1仍然有年代概念，但是维护成了一个个region，即新生代的eden、from以及to区域，包括老年代都是一个个region。通过remembered set维护region之间的关系，虽然开销比较大，但是好处也多。region之间采用的是复制算法，但其实可以看成标记-整理算法，可以避免内存碎片化。G1还有一个Humongous的概念，Humongous也是一个region，属于老年代，超大对象直接放入老年代就是直接放进Humongous中，有时候Humongous占用了不止一个region。
+   兼顾吞吐量和停顿时间，JDK9以后的默认GC。
+   
+   之前的收集器要么工作在新生代要么工作在老年代，而G1可以面向堆内任何部分进行回收，衡量标准不再是它属于哪个分代，而是哪块内存中存放的垃圾数量更多，回收受益最大，这就是G1收集器的Mixed GC模式.
+   
+   G1仍然有年代概念，但是维护成了一个个region，即新生代的eden、from以及to区域，包括老年代都是一个个region。通过remembered set维护region之间的关系，虽然开销比较大，但是好处也多。region之间采用的是复制算法，但其实可以看成标记-整理算法，可以避免内存碎片化。G1还有一个Humongous的概念，Humongous也是一个region，属于老年代，超大对象直接放入老年代就是直接放进Humongous中，有时候Humongous占用了不止一个region。
 
 #### GC 日志
 
