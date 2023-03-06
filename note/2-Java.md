@@ -628,11 +628,9 @@ https://www.cnblogs.com/aspirant/p/7200523.html
 
    是最基本、历史最悠久的收集器，是单线程的收集器，在进行垃圾回收时必须暂停其他所有工作线程。是JDK8中client模式下默认GC。优点：简单高效（与其他收集器的单线程比）
 
-   新生代的Serial GC采用复制算法，老年代的Serial GC采用标记-整理算法，由于区别算法不同，老年代的Serial GC专称Serial Old。
-
 2. **ParNew GC（新生代收集器-复制算法）**
 
-   Serial GC的多线程版本，一般用于新生代，配合老年代的CMS GC使用
+   Serial GC的多线程版本，一般用于新生代，配合老年代的CMS GC（只有 Serial 和 ParNew 可以和 CMS 配合）使用
 
    该收集器也是激活CMS后，新生代的默认垃圾收集器。一般和CMS进行搭配使用.
 
@@ -640,9 +638,16 @@ https://www.cnblogs.com/aspirant/p/7200523.html
 
    也是Serial GC的多线程版本，是JDK8中server模式下的默认GC，吞吐量优先。
 
+   吞吐量：CPU 用于运行用户代码的时间 / CPU 总耗时（垃圾收集的时间越短越好），适合与用户交互的程序
+
+   - -XX：MaxGCPauseMillis：最大垃圾收集停顿时间
+   - -XX：GCTimeRatio：直接设置吞吐量大小
+
 4. **CMS GC（老年代并行收集器-标记-清除算法）**
 
-   并发GC，减少停顿时间，但是会占用更多CPU资源和用户争抢线程，基于标记-清除算法，可能产生内存碎片化问题，因此长时间后会触发full GC，而full GC停顿时间是很长的。
+   特点：并发收集、低停顿。但是会占用更多CPU资源和用户争抢线程，基于标记-清除算法，可能产生内存碎片化问题，因此长时间后会触发full GC，而full GC停顿时间是很长的。
+
+   为了解决Full GC 问题，CMS 收集器提供了 -XX：+UseCMSCompactAtFullCollection 的开关参数（默认开启），用于在 CMS 收集器顶不住要进行 Full GC 时开启内存碎片合并整理过程。
 
 5. **G1 GC（Garbage First）**
 
