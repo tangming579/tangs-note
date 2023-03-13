@@ -20,11 +20,51 @@ String isoCode = Optional.ofNullable(user).map(User::getAddress).map(Address::ge
                 .map(Country::getIsocode).orElse("Unknow");
 ```
 
-
-
 ### 泛型
 
-参考：https://segmentfault.com/a/1190000039835272
+[参考](https://segmentfault.com/a/1190000039835272)
+
+`Java`的泛型是在`1.5`引入的，只在**编译期**做泛型检查，**运行期**泛型就会消失，我们把这称为“泛型擦除”，类型擦除后保留原始类型。
+
+原始类型就是擦除去了泛型信息，最后在字节码中的类型变量的真正类型，无论何时定义一个泛型，相应的原始类型都会被自动提供，类型变量擦除，并使用其限定类型(无限定的变量用Object)替换。
+
+问：是否能够通过instanceof查询ArrayList的类限定类型（泛型信息）？
+
+不能。
+
+**Java协变和逆变**
+
+- 协变：将父类保持了子类型的继承关系。通过协变实现子类型的泛型类型可以赋值给父类型泛型。
+
+  ```
+  ArrayList<? extends Number> list1 = new ArrayList<Integer>();
+  ```
+
+- 逆变：逆转了子类型的关系。将父类型泛型赋值给子类型泛型。
+
+  ```
+  ArrayList<? super Integer> list2 = new ArrayList<Number>();
+  ```
+
+**通配符**
+
+- `<?>`：无界通配符，即类型不确定，任意类型
+- `<? extends T>`：上边界通配符，即`?`是继承自`T`的任意子类型，遵守只读不写
+- `<? super T>`：下边界通配符，即`?`是`T`的任意父类型，遵守只写不读
+
+**泛型反射**
+
+利用反射来获取泛型的类型（泛型信息）
+
+1．获取当前类
+
+2．获取目标字段
+
+3．获取包含泛型类型的类型 getGenericType()
+
+4．强转至子类ParameterizedType因为Type没有任何对应的方法
+
+5．获得泛型真正的类型 getActualTypeArguments()
 
 ## 1. 多线程
 
