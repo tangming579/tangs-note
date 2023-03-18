@@ -20,6 +20,11 @@ String isoCode = Optional.ofNullable(user).map(User::getAddress).map(Address::ge
                 .map(Country::getIsocode).orElse("Unknow");
 ```
 
+**为什么需要包装类**
+
+1. 作为和基本数据类型对应的类类型存在，方便涉及到对象的操作（如空值，集合存储）。
+2. 包含每种基本数据类型的相关属性如最大值、最小值等，以及相关的操作方法。
+
 ### 泛型
 
 [参考](https://segmentfault.com/a/1190000039835272)
@@ -34,23 +39,27 @@ String isoCode = Optional.ofNullable(user).map(User::getAddress).map(Address::ge
 
 **Java协变和逆变**
 
-- 协变：将父类保持了子类型的继承关系。通过协变实现子类型的泛型类型可以赋值给父类型泛型。
+- 协变：将父类保持了子类型的继承关系。通过协变实现子类型的泛型类型可以赋值给父类型泛型。遵守只读不写
 
   ```
+  假设可以写入，即假设可以写入Number及其子类，此时有A，B都是T的子类，那么写入A后，进行获取时，由于泛型擦除是无法知道获取的是A还是B，也就不知道该强转成A还是B，所以会报错
+  
   ArrayList<? extends Number> list1 = new ArrayList<Integer>();
   ```
 
-- 逆变：逆转了子类型的关系。将父类型泛型赋值给子类型泛型。
+- 逆变：逆转了子类型的关系。将父类型泛型赋值给子类型泛型。遵守只写不读
 
   ```
+  假设可以进行读取，即读出来的是T或者其父类，同样由于泛型擦除没法确定读出来的具体类型，只能用Object接收，这样无任何意义
+           
   ArrayList<? super Integer> list2 = new ArrayList<Number>();
   ```
 
-**通配符**
+**使用场景**
 
-- `<?>`：无界通配符，即类型不确定，任意类型
-- `<? extends T>`：上边界通配符，即`?`是继承自`T`的任意子类型，遵守只读不写
-- `<? super T>`：下边界通配符，即`?`是`T`的任意父类型，遵守只写不读
+《Effective Java》给出精炼的描述：**producer-extends, consumer-super（PECS）**
+
+从数据流来看，extends是限制数据来源的（**生产者**），而super是限制数据流入的（**消费者**）
 
 **泛型反射**
 
@@ -65,6 +74,30 @@ String isoCode = Optional.ofNullable(user).map(User::getAddress).map(Address::ge
 4．强转至子类ParameterizedType因为Type没有任何对应的方法
 
 5．获得泛型真正的类型 getActualTypeArguments()
+
+
+
+> - getType()：返回一个 Class 对象，它标识了此 Field 对象所表示字段的声明类型。
+> - getGenericType()：返回一个 Type 对象，它表示此 Field 对象所表示字段的声明类型。
+
+```java
+public class testgetGenericType{
+	private Map<String, Number> collection;
+    
+    public static void main(String[] args){
+        Class<?> clazz = TestgetGenericType.class;//取得class
+        Field field = clazz.getDeclaredFiled("collection");//取得字段变量
+        Type type = field.getGenericType();//取得泛型的类型
+        ParameterizedType ptype = (ParameterizedType)type;//转成参数化类型
+        System.out.printLn(ptype.getActualTypeArguments()[0]);
+        System.out.printLn(ptype.getActualTypeArguments()[1]);
+    }
+}
+
+//输出结果：
+//class.java.lang.String
+//class.java.lang.Number
+```
 
 ## 1. 多线程
 
@@ -99,7 +132,7 @@ String isoCode = Optional.ofNullable(user).map(User::getAddress).map(Address::ge
   
 - notifyAll：**将所有等待的线程唤醒**
 
-- join：**等待调用该方法的线程执行完毕后，主线程再往下继续执行**(该方法也要捕获异常)
+- join：调用处的线程等待，直到thread方法执行完成（本质就是先wait，执行完后notifyAll）
 
 - sleep：**使调用该方法的线程暂停执行一段时间**
   
@@ -109,6 +142,9 @@ String isoCode = Optional.ofNullable(user).map(User::getAddress).map(Address::ge
 - yeild：**线程让步**
 
   主要用于执行一些耗时较长的计算任务时，为了防止计算机处于“卡顿”的线程，会时不时的让出一些CPU的资源，给操作系统内的其他进程使用。
+
+  - 不会将线程转入阻塞状态，只会给优先级相同，或优先级更高的线程执行机会，因此完全有可能某个线程被yield()方法暂停之后，立即再次获得处理器资源被执行
+  - sleep()方法声明抛出了InterruptedException异常，yeild 没有声明抛出异常
 
 - interrupt：**发送终止信号**
 
@@ -352,7 +388,7 @@ CAS+ CLH(变种双向链表) + state变量
 
 AQS实现了一个FIFO的队列。底层实现的数据结构是一个**双向链表**。可以看成是一个用来实现同步锁以及其他涉及到同步功能的核心组件
 
-AQS的实现依赖内部的同步队列，也就是FIFO的双向队列，如果当前线程竞争锁失败，那么AsQS会把当前线程以及等待状态信息构造成一个Node加入到同步队列中，同时再阻塞该线程。当获取锁的线程释放锁以后，会从队列中唤醒一个阻塞的节点(线程)。
+AQS的实现依赖内部的同步队列，也就是FIFO的双向队列，如果当前线程竞争锁失败，那么AQS会把当前线程以及等待状态信息构造成一个Node加入到同步队列中，同时再阻塞该线程。当获取锁的线程释放锁以后，会从队列中唤醒一个阻塞的节点(线程)。
 
 不同于synchronized同步队列和等待队列只有一个，AQS的等待队列是有多个，因为AQS可以实现排他锁（ReentrantLock）和非排他锁（ReentrantReadWriteLock——读写锁），读写锁就是一个需要多个等待队列的锁。等待队列（Condition）用来保存被阻塞的线程的。
 
@@ -632,6 +668,10 @@ https://www.cnblogs.com/aspirant/p/7200523.html
 
 根据对象存货周期的不同将内存划分为几块，一般把java堆分为新生代和老年代，进行分代回收
 
+- 标记-清除收集算法：首先标记出所有需要回收的对象，在标记完成后统一回收所有被标记的对象，不足：
+  1. 标记和清除效率都不高
+  2. 标记清除后悔产生大量不连续的内存碎片
+
 **1. 新生代**：每次垃圾回收都有大量对象死去，之后少量存活，适合采用复制算法。
 
 - 复制算法：将内存划分为大小相同的两块（Eden和Survior默认比例是8:1），每次只使用其中一块。当这一块内存用完了，就将还存活着的对象复制到另外一块上面，然后再把已使用的内存空间一次清理掉，不足：
@@ -642,10 +682,6 @@ https://www.cnblogs.com/aspirant/p/7200523.html
   分配担保：新生代内存不足时，把新生代的存活的对象搬到老生代，这里老年代是担保人
 
 **2. 老年代**：对象存活率高，没有额外空间对他进行分配担保，适合采用标记-整理、标记-清除搜集算法
-
-- 标记-清除收集算法：首先标记出所有需要回收的对象，在标记完成后统一回收所有被标记的对象，不足：
-  1. 标记和清除效率都不高
-  2. 标记清除后悔产生大量不连续的内存碎片
 
 - 标记-整理算法：标记过程与 “标记-清除” 算法一致，但后续步骤不是直接对可回收对象进行清理，而是让所有存活对象都向一端移动，然后直接清理掉端边界以外内存
 
@@ -719,16 +755,16 @@ java -jar
 -XX:+PrintGCDateStamps 输出GC的时间戳（以日期的形式，如 2013-05-04T21:53:59.234+0800）
 -XX:+PrintHeapAtGC 　　在进行GC的前后打印出堆的信息
 -Xloggc:../logs/gc.log 日志文件的输出路径
--Xms1024m （堆最大大小）
--Xmx1024m （堆默认大小）
+-Xms1024m （堆最大大小）堆内存设置过小，会频繁发生GC
+-Xmx1024m （堆默认大小）每次JVM增加堆大小时，它都必须向操作系统请求额外的内存，这会花费一些时间
 -Xmn256m （新生代大小）
--Xss256k （棧最大深度大小）
+-Xss256k （栈最大深度大小）
 -XX:SurvivorRatio=8 （新生代分区比例 8:2）
 -XX:+UseConcMarkSweepGC （指定使用的垃圾收集器，这里使用CMS收集器）
 app.jar
 ```
 
-
+把-Xms 和 -Xmx 设置为一致，是为了避免频繁扩容和GC释放堆内存造成的系统开销/压力
 
 ## 4. IO
 
