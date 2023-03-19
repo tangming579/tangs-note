@@ -132,7 +132,7 @@ public class testgetGenericType{
   
 - notifyAll：**将所有等待的线程唤醒**
 
-- join：调用处的线程等待，直到thread方法执行完成（本质就是先wait，执行完后notifyAll）
+- join：调用所在的线程等待，直到thread方法执行完成（本质就是先wait，执行完后notifyAll）
 
 - sleep：**使调用该方法的线程暂停执行一段时间**
   
