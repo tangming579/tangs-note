@@ -909,7 +909,16 @@ PageHelper是 MyBatis 的一个插件，内部实现了一个PageInterceptor拦�
 
 **为什么decimal精度高**
 
-BigDecimal能更精确表示带小数点的数值，因为采用了long intCompact和int scale来表示数值，而不是浮点型的科学计数法
+十进制整数在转化成二进制数时不会有精度问题，那么把十进制小数扩大N倍让它在整数的维度上进行计算，并保留相应的精度信息。
+
+```java
+public class BigDecimal { 
+	//值的绝对long型表示
+	private final transient long intCompact;
+	//值的小数点后的位数
+	private final int scale;
+}
+```
 
 **lambda**
 
