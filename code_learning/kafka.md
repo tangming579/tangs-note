@@ -2,7 +2,7 @@ Apache Kafka 是一个分布式流处理平台
 
 数据流是无边界数据集的抽象表示。无边界意味着无限和持续增长。流式处理是指实时地处理一个或多个事件流。流式处理是一种编程范式，就像请求与响应范式和批处理范式那样
 
-Kafka名词解释：
+### Kafka 名词解释
 
 1. Producer：消息生产者，就是向 Kafka broker 发消息的客户端。
 
@@ -31,3 +31,31 @@ Kafka名词解释：
     
 
 同一个partition内的消息只能被同一个组中的一个consumer消费,当消费者数量多于partition的数量时，**多余的消费者空闲**。
+
+### 多副本机制
+
+1. Kafka 通过给特定 Topic 指定多个 Partition, 而各个 Partition 可以分布在不同的 Broker 上, 这样便能提供比较好的并发能力
+2. Partition 可以指定对应的 Replica 数, 这也极大地提高了消息存储的安全性, 提高了容灾能力，不过也相应的增加了所需要的存储空间
+3. 多个副本之间会有一个 leader ，其他副本称为 follower。我们发送的消息会被发送到 leader 副本，然后 follower 副本才能从 leader 副本中拉取消息进行同步
+
+### Zookeeper 作用
+
+1. **Broker 注册** ：在 Zookeeper 上会有一个专门**用来进行 Broker 服务器列表记录**的节点。每个 Broker 在启动时，都会到 Zookeeper 上进行注册，即到 `/brokers/ids` 下创建属于自己的节点。每个 Broker 就会将自己的 IP 地址和端口等信息记录到该节点中去
+2. **Topic 注册** ： 在 Kafka 中，同一个**Topic 的消息会被分成多个分区**并将其分布在多个 Broker 上，**这些分区信息及与 Broker 的对应关系**也都是由 Zookeeper 在维护。比如我创建了一个名字为 my-topic 的主题并且它有两个分区，对应到 zookeeper 中会创建这些文件夹：`/brokers/topics/my-topic/Partitions/0`、`/brokers/topics/my-topic/Partitions/1`
+3. **负载均衡** ：上面也说过了 Kafka 通过给特定 Topic 指定多个 Partition, 而各个 Partition 可以分布在不同的 Broker 上, 这样便能提供比较好的并发能力。 对于同一个 Topic 的不同 Partition，Kafka 会尽力将这些 Partition 分布到不同的 Broker 服务器上。当生产者产生消息后也会尽量投递到不同 Broker 的 Partition 里面。当 Consumer 消费的时候，Zookeeper 可以根据当前的 Partition 数量以及 Consumer 数量来实现动态负载均衡。
+
+### 保证消息的消费顺序
+
+Kafka 中发送 1 条消息的时候，可以指定 topic, partition, key,data（数据） 4 个参数。如果你发送消息的时候指定了 Partition 的话，所有消息都会被发送到指定的 Partition。并且，同一个 key 的消息可以保证只发送到同一个 partition，这个我们可以采用表/对象的 id 来作为 key 。
+
+### 保证消息不丢失
+
+- 生产者
+  1. 添加回调函数，检查失败原因重新发送
+  2. retries （重试次数）设置大一些，出现网络问题能够自动重试消息发送，避免消息丢失
+- 消费者：手动提交 offset
+- Kafka
+  1. leader 副本所在的 broker 突然挂掉，没来得及同步到 follower：设置 acks = all（延迟会很高）
+  2. 增加副本数量：replication.factor >= 3
+
+### 保证消息不重复消费
