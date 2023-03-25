@@ -51,11 +51,29 @@ Kafka 中发送 1 条消息的时候，可以指定 topic, partition, key,data�
 ### 保证消息不丢失
 
 - 生产者
+
   1. 添加回调函数，检查失败原因重新发送
   2. retries （重试次数）设置大一些，出现网络问题能够自动重试消息发送，避免消息丢失
+
 - 消费者：手动提交 offset
+
 - Kafka
-  1. leader 副本所在的 broker 突然挂掉，没来得及同步到 follower：设置 acks = all（延迟会很高）
-  2. 增加副本数量：replication.factor >= 3
+
+  1. **acks = all**：leader 副本所在的 broker 突然挂掉，没来得及同步到 follower（延迟会很高）
+
+  2. **replication.factor >= 3**：增加副本数量
+
+  3. **min.insync.replicas > 1**：消息至少要被写入到 2 个副本才算是被成功发送
+
+     （推荐 **replication.factor = min.insync.replicas + 1**）
 
 ### 保证消息不重复消费
+
+- 消费消息服务做幂等校验，比如 Redis 的set、MySQL 的主键等天然的幂等功能。
+
+- 将`enable.auto.commit`参数设置为 false，关闭自动提交，开发者在代码中手动提交 offset。那么这里会有个问题：
+
+  什么时候提交offset合适？
+
+  - 处理完消息再提交：依旧有消息重复消费的风险，和自动提交一样
+  - 拉取到消息即提交：会有消息丢失的风险。允许消息延时的场景，一般会采用这种方式。然后，通过定时任务在业务不繁忙（比如凌晨）的时候做数据兜底。
