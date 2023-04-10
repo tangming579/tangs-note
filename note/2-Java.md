@@ -812,6 +812,9 @@ java -jar
 -Xmn256m （新生代大小）
 -Xss256k （栈最大深度大小）
 -XX:SurvivorRatio=8 （新生代分区比例 8:2）
+-XX:+HeapDumpOnOutOfMemoryError  （在OOM的时候生成heap dump）
+-XX:+HeapDumpBeforeFullGC （在full GC前生成heap dump）
+-XX:HeapDumpPath=/opt/tmp/heapdump.hprof
 -XX:+UseConcMarkSweepGC （指定使用的垃圾收集器，这里使用CMS收集器）
 app.jar
 ```
@@ -831,9 +834,20 @@ app.jar
    -Xmn256m 新生代分配 256m 的内存（NewSize 与 MaxNewSize 设为一致）
    ```
 
-3. 
+#### JDK 命令行工具
 
+这些命令在 JDK 安装目录下的 bin 目录下：
 
+- **`jps`** (JVM Process Status）: 类似 UNIX 的 `ps` 命令。用于查看所有 Java 进程的启动类、传入参数和 Java 虚拟机参数等信息；
+- **`jstat`**（JVM Statistics Monitoring Tool）: 用于收集 HotSpot 虚拟机各方面的运行数据;
+- **`jinfo`** (Configuration Info for Java) : Configuration Info for Java,显示虚拟机配置信息;
+- **`jmap`** (Memory Map for Java) : 生成堆转储快照;
+- **`jhat`** (Java Heap Analysis Tool) : 用于分析 heapdump 文件，它会建立一个 HTTP/HTML 服务器，让用户可以在浏览器上查看分析结果;
+- **`jstack`** (Stack Trace for Java) : 生成虚拟机当前时刻的线程快照，线程快照就是当前虚拟机内每一条线程正在执行的方法堆栈的集合。
+
+#### JConsole
+
+JConsole 是基于 JMX 的可视化监视、管理工具。可以很方便的监视本地及远程服务器的 java 进程的内存使用情况
 
 ## 4. IO
 
