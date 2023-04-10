@@ -783,6 +783,13 @@ https://www.cnblogs.com/aspirant/p/7200523.html
 
    JDK11 中推出的一款低延迟垃圾回收器，适用于大内存低延迟服务的内存管理和回收，在 128G 的大堆下，最大停顿时间才 1.68 ms，停顿时间远胜于 G1 和 CMS
 
+```
+-XX:+UseSerialGC
+-XX:+UseParallelGC
+-XX:+UseParNewGC
+-XX:+UseG1GC
+```
+
 #### GC 日志
 
 IDEA中配置GC日志：将参数值设置到VM options中即可
@@ -809,7 +816,24 @@ java -jar
 app.jar
 ```
 
-把-Xms 和 -Xmx 设置为一致，是为了避免频繁扩容和GC释放堆内存造成的系统开销/压力
+### 调优
+
+1. 堆内存`–Xms`、`-Xmx`，把-Xms 和 -Xmx 设置为一致，是为了避免频繁扩容和GC释放堆内存造成的系统开销/压力
+
+2. 显式新生代内存
+
+   将新对象预留在新生代，由于 Full GC 的成本远高于 Minor GC，因此尽可能将对象分配在新生代是明智的做法，实际项目中根据 GC 日志分析新生代空间大小分配是否合理，适当通过“-Xmn”命令调节新生代大小，最大限度降低新对象直接进入老年代的情况。
+
+   ```shell
+   -XX:NewSize=256m  新生代分配 最小 256m 的内存
+   -XX:MaxNewSize=1024m 最大 1024m 的内存
+   -XX:NewRatio=1 设置老年代与新生代内存的比值为 1
+   -Xmn256m 新生代分配 256m 的内存（NewSize 与 MaxNewSize 设为一致）
+   ```
+
+3. 
+
+
 
 ## 4. IO
 
