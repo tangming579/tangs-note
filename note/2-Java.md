@@ -1,24 +1,22 @@
 ## 0. 基础
 
-### lambda
+Java 8 新特性
 
-- 函数式接口：接口中有且仅有一个抽象方法
-- 方法引用：使用 :: ，通过方法的名字来指向一个方法。
-  - 构造器引用：Car::new
-  - 静态方法引用：Car::collide
-  - 对象方法引用：Car::repair
-  - 特定对象的方法引用：cars.forEach(police::follow)
+- Interface
+  - `default` ：在接口中定义方法实现，实现类自动拥有该方法实现
+  -  `static`：在接口中定义方法实现，实现类不继承静态方法
+  - 函数式接口：有且仅有一个抽象方法（可以有多个非抽象方法），可以被隐式转换为 lambda 表达式
+- Lambda 表达式
+
+- Stream
+- Optional
+- 时间类增强：非线程安全、时区处理麻烦、各种格式化、时间计算繁琐
 
 ### Stream
 
 流是从支持数据处理操作的源生成的字节序列，源可以是数组、文件、集合、函数。它不是数据结构并不保存数据，它的主要目的在于计算。
 
-Optional
 
-```java
-String isoCode = Optional.ofNullable(user).map(User::getAddress).map(Address::getCountry)
-                .map(Country::getIsocode).orElse("Unknow");
-```
 
 **为什么需要包装类**
 
