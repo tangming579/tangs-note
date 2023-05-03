@@ -837,11 +837,40 @@ app.jar
 这些命令在 JDK 安装目录下的 bin 目录下：
 
 - **`jps`** (JVM Process Status）: 类似 UNIX 的 `ps` 命令。用于查看所有 Java 进程的启动类、传入参数和 Java 虚拟机参数等信息；
+
+  ```shell
+  jps -l   #输出主类的全名
+  ```
 - **`jstat`**（JVM Statistics Monitoring Tool）: 用于收集 HotSpot 虚拟机各方面的运行数据;
+
+  ```sh
+  jstat -gc 31736 1000 10 #分析进程 id 为 31736 的 gc 情况，每隔 1000ms 打印一次，打印 10 次
+  ```
 - **`jinfo`** (Configuration Info for Java) : Configuration Info for Java,显示虚拟机配置信息;
+
+  ```sh
+  jinfo -flag MaxHeapSize 17340
+  jinfo -flag +PrintGC 17340    #开启打印GC
+  ```
 - **`jmap`** (Memory Map for Java) : 生成堆转储快照;
-- **`jhat`** (Java Heap Analysis Tool) : 用于分析 heapdump 文件，它会建立一个 HTTP/HTML 服务器，让用户可以在浏览器上查看分析结果;
-- **`jstack`** (Stack Trace for Java) : 生成虚拟机当前时刻的线程快照，线程快照就是当前虚拟机内每一条线程正在执行的方法堆栈的集合。
+
+  ```
+  jmap -dump:format=b,file=/home/heap.hprof 17340
+  ```
+- **`jhat`** (Java Heap Analysis Tool) : 用于分析 heapdump 文件，它会建立一个 HTTP/HTML 服务器
+
+  ```
+  jhat /home/heap.hprof
+  ```
+- **`jstack`** (Stack Trace for Java) : 生成虚拟机当前时刻的线程快照
+
+  ```
+  jstack 9256
+  ```
+
+#### VisualVM
+
+jdk的安装目录的bin目录下，jvisualvm.exe
 
 #### JConsole
 
