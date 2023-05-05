@@ -8,15 +8,9 @@ Java 8 新特性
   - 函数式接口：有且仅有一个抽象方法（可以有多个非抽象方法），可以被隐式转换为 lambda 表达式
 - Lambda 表达式
 
-- Stream
+- Stream：数据处理操作的源生成的字节序列，源可以是数组、文件、集合、函数。它不是数据结构并不保存数据，目的在于计算
 - Optional
 - 时间类增强：非线程安全、时区处理麻烦、各种格式化、时间计算繁琐
-
-### Stream
-
-流是从支持数据处理操作的源生成的字节序列，源可以是数组、文件、集合、函数。它不是数据结构并不保存数据，它的主要目的在于计算。
-
-
 
 **为什么需要包装类**
 
@@ -584,6 +578,9 @@ CopyOnWrite容器即写时复制的容器。通俗的理解是当我们往一个
 1.将HashSet或HashMap转换为线程安全，使用Collections.synchronizedSet或Collections.synchronizedMap方法；
 2.使用Collections.newSetFromMap(new ConcurrentHashMap<Integer, Boolean>())或使用java.util.concurrent包下的ConcurrentHashMap；
 3.仍然使用HashSet或HashMap，使用时手动进行加锁或同步；
+
+- LinkedHashSet：链表维护元素的次序
+- HashSet：树结构实现红黑树算法。元素是按顺序进行排列，但是contains()等方法都是复杂度为O(log (n))
 
 ### fail-fast机制
 
