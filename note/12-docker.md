@@ -47,10 +47,12 @@ docker inspect demotest     查看 运行容器的详情
 docker ps -a                      查看当前所有的容器
 docker rm $(docker ps -aq)     删除所有容器
 docker rmi $(docker images -q)   删除所有镜像
+docker rmi $(docker images | grep "none" | awk '{print $3}') 删除所有满足条件的
 docker cp /www/runoob 96f7f14e99ab:/www/  将主机/www/runoob目录拷贝到容器的/www目录下
 docker commit f3aff5ca8aa3 mynetweb   将容器f3aff5ca8aa3生成镜像mynetweb
 docker save busybox:1.0 > busybox.tar
 docker save 3f43f72cb283 > busybox.tar
+docker save busybox:1.0 |gzip > busybox.tgz
 #如果save时使用的tag 则会保存 tag信息，如果使用image ID 则会丢失。
 docker load -i nginx.tar
 docker tag [镜像id] [新镜像名称]:[新镜像标签] 
