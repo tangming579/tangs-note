@@ -1,12 +1,45 @@
 ## 基本
 
-Go语言中的 new 和 make 主要区别如下：
+### Slice
+
+**数组和切片的区别**
+
+- 数组是定长，访问和复制不能超过数组定义的长度，否则就会下标越界，切片长度和容量可以自动扩容
+- 数组是值类型，切片是引用类型，每个切片都引用了一个底层数组
+
+**slices能作为map类型的key吗**
+
+可比较的类型都可以作为map key，不能作为map key 的类型包括：slices、maps、functions
+
+### Map
+
+**new 和 make 区别**
 
 - make 只能用来分配及初始化类型为 slice、map、chan 的数据。new 可以分配任意类型的数据；
 - new 分配返回的是指针，即类型 *Type。make 返回引用，即 Type；
 - new 分配的空间被清零。make 分配空间后，会进行初始化；
 
+**for range 时地址会发生变化吗**
+
+ for a,b := range c 遍历中， a 和 b 在内存中只会存在一份，即之后每次循环时遍历到的数据都是以值覆盖的方式赋给 a 和 b，a，b 的内存地址始终不变。由于有这个特性，for 循环里面如果开协程，不要直接把 a 或者 b 的地址传给协程。解决办法：在每次循环时，创建一个临时变量。
+
 ## 协程
+
+**defer**
+
+- defer延迟函数，释放资源，收尾工作；如释放锁，关闭文件，关闭链接；捕获panic;
+- defer函数紧跟在资源打开后面，否则defer可能得不到执行，导致内存泄露。
+- 多个 defer 调用顺序是 LIFO（后入先出），defer后的操作可以理解为压入栈中
+
+**select**
+
+go 的 select 为 golang 提供了多路 IO 复用机制，用于检测是否有读写事件是否 ready。linux 的系统 IO 模型有 select，poll，epoll，go 的 select 和 linux 系统 select 非常相似，特点：
+
+- select 操作至少要有一个 case 语句，出现读写 nil 的 channel 该分支会忽略，在 nil 的 channel 上操作则会报错。
+- select 仅支持管道，而且是单协程操作。
+- 每个 case 语句仅能处理一个管道，要么读要么写。
+- 多个 case 语句的执行顺序是随机的。
+- 存在 default 语句，select 将不会阻塞，但是存在 default 会影响
 
 ## Gin
 
