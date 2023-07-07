@@ -25,6 +25,16 @@
 
 ### Map
 
+map默认是无序的，保证遍历顺序使用 orderedmap，保证并发sync.Map
+
+**map 中删除一个 key，它的内存会释放吗？**
+
+如果删除的元素是值类型，如int，float，bool，string以及数组和struct，map的内存不会自动释放
+
+如果删除的元素是引用类型，如指针，slice，map，chan等，map的内存会自动释放，但释放的内存是子元素应用类型的内存占用
+
+将map设置为nil后，内存被回收。
+
 ### context
 
 应用：上下文控制、多个 goroutine 之间的数据交互等、超时控制：到某个时间点超时，过多久超时，
@@ -53,6 +63,10 @@ go 的 select 为 golang 提供了多路 IO 复用机制，用于检测是否有
 - 每个 case 语句仅能处理一个管道，要么读要么写。
 - 多个 case 语句的执行顺序是随机的。
 - 存在 default 语句，select 将不会阻塞，但是存在 default 会影响
+
+### Mutex
+
+
 
 ### GPM
 
