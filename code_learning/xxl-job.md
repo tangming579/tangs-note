@@ -395,6 +395,51 @@ public void addTrigger(final int jobId, final TriggerTypeEnum triggerType,
 
 #### 5. 注册中心
 
+xxl-job 的分布式注册中心，其注册表使用mysql来进行存储，心跳机制通过http请求实现
+
+xxl-job中服务注册需要绑定一个执行器作为载体，当服务注册后首先会将注册机器信息存入注册表中，扫描线程会不断扫描注册表，将注册表中的机器根据appName配置绑定到执行器上。
+
+
+#### 6. 故障转移
+
+```java
+//代码位置：com.xxl.job.admin.core.route.strategy.ExecutorRouteFailover#route
+public ReturnT<String> route(TriggerParam triggerParam, List<String> addressList) {
+
+        StringBuffer beatResultSB = new StringBuffer();
+        for (String address : addressList) {
+            // beat
+            ReturnT<String> beatResult = null;
+            try {
+                ExecutorBiz executorBiz = XxlJobScheduler.getExecutorBiz(address);
+                //心跳检测
+                beatResult = executorBiz.beat();
+            } catch (Exception e) {
+                logger.error(e.getMessage(), e);
+                beatResult = new ReturnT<String>(ReturnT.FAIL_CODE, ""+e );
+            }
+            beatResultSB.append( (beatResultSB.length()>0)?"<br><br>":"")
+                    .append(I18nUtil.getString("jobconf_beat") + "：")
+                    .append("<br>address：").append(address)
+                    .append("<br>code：").append(beatResult.getCode())
+                    .append("<br>msg：").append(beatResult.getMsg());
+
+            // beat success
+            //心跳正常，返回执行器地址
+            if (beatResult.getCode() == ReturnT.SUCCESS_CODE) {
+
+                beatResult.setMsg(beatResultSB.toString());
+                beatResult.setContent(address);
+                return beatResult;
+            }
+        }
+        return new ReturnT<String>(ReturnT.FAIL_CODE, beatResultSB.toString());
+
+}
+```
+
+ExecutorRouteFailover是失败转移路由，route方法遍历执行器地址，然后发送心跳给执行器服务，如果心跳正常，则成功返回该执行器地址，否则返回失败码。
+
 ### 框架缺点
 
 1. 通过获取 DB锁来保证集群中执行任务的唯一性，当调度中心数量和短任务数量都很多时，性能不高
