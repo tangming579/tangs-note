@@ -40,7 +40,7 @@ public void init() throws Exception {
         /**
         * 任务触发器线程池，负责具体任务调度
         * 分为fastTriggerPool、slowTriggerPool两个线程池
-        * 当任务数量1分钟超过10个时，加入慢线程池
+        * 当任务数量1分钟超时超过10个时，加入慢线程池
         */
         JobTriggerPoolHelper.toStart();
 		/**
