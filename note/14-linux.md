@@ -414,6 +414,7 @@ telnet 118.10.6.128 88  --- 测试端口是否打开
 -X         指定 HTTP 请求的方法
 -d         用于发送 POST 请求的数据体。
 -H         添加 HTTP 请求的标头。
+-v         显示一次 http 通信的整个过程，包括端口连接和 http request 头信息
 --cookies  用来向服务器发送 Cookie。
 
 curl -X POST -H "Content-type: application/json" -d '{"phone":"13521389587","password":"test"}' http://192.168.100.2:8080/api/user -cookie "user=root;pass=123456"
