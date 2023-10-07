@@ -46,7 +46,21 @@ map默认是无序的，保证遍历顺序使用 orderedmap，保证并发sync.M
 
 ## 协程
 
+Go语言中的并发模型是基于goroutine（协程）的，而不是基于线程的。Go语言中的协程和传统意义上的线程相比，最大的优点就是“轻量”。线程的调度是由操作系统来负责的，需要频繁地在用户态和内核态之间切换；协程的调度是由Go运行时来负责的，它使用了一些高效的算法（GPM）来减少用户态和内核态之间的切换，因此Go协程的性能比线程更好。
+
 ### channel
+
+*通道* 是连接多个协程的管道。 可以从一个协程将值发送到通道，然后在另一个协程中接收
+
+```go
+func main() {
+    messages := make(chan string, 2)
+    messages <- "buffered"
+    messages <- "channel"
+    fmt.Println(<-messages)
+    fmt.Println(<-messages)
+}
+```
 
 **defer**
 
@@ -56,7 +70,34 @@ map默认是无序的，保证遍历顺序使用 orderedmap，保证并发sync.M
 
 **select**
 
-go 的 select 为 golang 提供了多路 IO 复用机制，用于检测是否有读写事件是否 ready。linux 的系统 IO 模型有 select，poll，epoll，go 的 select 和 linux 系统 select 非常相似，特点：
+选择器可以同时等待多个通道操作。 将协程、通道和选择器结合，是 Go 的一个强大特性。go 的 select 为 golang 提供了多路 IO 复用机制，用于检测是否有读写事件是否 ready。
+
+```go
+func main() {
+    c1 := make(chan string)
+    c2 := make(chan string)
+    
+    go func() {
+        time.Sleep(1 * time.Second)
+        c1 <- "one"
+    }()
+    go func() {
+        time.Sleep(2 * time.Second)
+        c2 <- "two"
+    }()
+
+    for i := 0; i < 2; i++ {
+        select {
+        case msg1 := <-c1:
+            fmt.Println("received", msg1)
+        case msg2 := <-c2:
+            fmt.Println("received", msg2)
+        }
+    }
+}
+```
+
+linux 的系统 IO 模型有 select，poll，epoll，go 的 select 和 linux 系统 select 非常相似，特点：
 
 - select 操作至少要有一个 case 语句，出现读写 nil 的 channel 该分支会忽略，在 nil 的 channel 上操作则会报错。
 - select 仅支持管道，而且是单协程操作。
@@ -64,7 +105,44 @@ go 的 select 为 golang 提供了多路 IO 复用机制，用于检测是否有
 - 多个 case 语句的执行顺序是随机的。
 - 存在 default 语句，select 将不会阻塞，但是存在 default 会影响
 
+### WaitGroup
+
+用于等待多个协程完成。类似于 java 中的 CountDownLatch
+
+```go
+func worker(id int) {
+    fmt.Printf("Worker %d starting\n", id)
+    time.Sleep(time.Second)
+    fmt.Printf("Worker %d done\n", id)
+}
+func main() {
+    var wg sync.WaitGroup
+    for i := 1; i <= 5; i++ {
+        wg.Add(1)
+        i := i
+        go func() {
+            defer wg.Done()
+            worker(i)
+        }()
+    }
+    wg.Wait()
+}
+```
+
 ### Mutex
+
+```
+type Container struct {
+    mu       sync.Mutex
+    counters map[string]int
+}
+
+func (c *Container) inc(name string) {
+    c.mu.Lock()
+    defer c.mu.Unlock()
+    c.counters[name]++
+}
+```
 
 
 
@@ -75,6 +153,8 @@ go 的 select 为 golang 提供了多路 IO 复用机制，用于检测是否有
 - 进程：是应用程序的启动实例，每个进程都有独立的内存空间，不同的进程通过进程间的通信方式来通信。
 - 线程：从属于进程，每个进程至少包含一个线程，线程是 CPU 调度的基本单位，多个线程之间可以共享进程的资源并通过共享内存等线程间的通信方式来通信。
 - 协程：为轻量级线程，与线程相比，协程不受操作系统的调度，协程的调度器由用户应用程序提供，协程调度器按照调度策略把协程调度到线程中运行
+
+
 
 ## GC
 
