@@ -489,6 +489,7 @@ gzip -r log.tar  --- 压缩一个tar备份文件，此时压缩文件的扩展�
 ```
 打包并压缩： tar -zcvf [目标文件名].tar.gz [原文件名/目录名]
 解压并解包： tar -zxvf [原文件名].tar.gz
+解压并解包： tar -zxvf [原文件名].tar.gz -C [目标路径]
 ```
 
 > z代表用gzip算法来压缩/解压。
