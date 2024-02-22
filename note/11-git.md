@@ -25,6 +25,12 @@ git config --global user.email  "tang.ming@sina.com"
 修改提交信息：
 1. git commit --amend   
 2. git commit --amend -m "填写提交的注释"
+
+修改本地分支的上游
+git branch --set-upstream-to=origin/devtest-4.2 devtest-4.2
+
+推送本地新分支到远程仓库
+git push -u origin devtest-4.2
 ```
 
 ### git reset
