@@ -18,8 +18,11 @@ Istio Pilot的Debug API接口通常用于获取有关Pilot内部状态的信息�
 
 要使用这些接口，你可以使用`curl`或类似工具从命令行访问它们。例如：
 
-```
+```sh
 bashcurl http://localhost:15000/debug/configz
+
+# 导出envoy的数据：
+kubectl exec group-n24000291 -nmesh-service -c istio-proxy -- curl -s 127.0.0.1:15000/config_dump > xds_envoy.txt
 ```
 
 ## Envoy
@@ -28,8 +31,11 @@ https://www.envoyproxy.io/docs/envoy/latest/operations/admin
 
 通过 HTTP GET 请求访问 Envoy 监听的 admin 地址（通常是 `localhost:15000`），并带上 `/config_dump` 路径，可以获取当前 Envoy 从各种组件加载的配置信息，并转储为 JSON 进行输出。在命令行中，你可以使用 `curl` 工具来实现这一操作，如下：
 
-```
+```sh
 bashcurl http://localhost:15000/config_dump
+
+# pilot的数据：
+kubectl exec istiod-5874f9d6c4-d4dtr -nistio-system -- curl -s '127.0.0.1:15014/debug/config_dump?proxyID=group-n24000291.mesh-service' > xds_pilot.txt
 ```
 
 这个命令会返回大量的 JSON 数据，其中包含了 Envoy 的路由、监听器、集群等配置信息。这些信息对于调试和诊断 Envoy 的行为非常有用。
