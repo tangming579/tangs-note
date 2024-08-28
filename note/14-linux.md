@@ -394,6 +394,15 @@ grep -r update /etc/acpi --- 查找/etc/acpi及其子目录下所有文件中包
 -w # 统计字数。
 ```
 
+##### systemctl
+
+```sh
+ # 配置文件放在 /lib/systemd/system/ 或 /etc/systemd/system/ 下
+systemctl list-units --type=service --state=running
+systemctl daemon-reload
+systemctl show etcd
+```
+
 #### 网络通讯
 
 ##### telnet
