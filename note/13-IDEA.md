@@ -73,3 +73,11 @@ Ctrl + /：单行注释
 Ctrl + Shift + /：多行注释 
 
 Shift + F6：重命名
+
+Shift + Enter：开始新行
+
+Ctrl + Alt + Enter：在当前行之前开始新行
+
+Ctrl + Shift + U：大小写转换
+
+Ctrl + P：参数信息提醒
