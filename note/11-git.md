@@ -55,7 +55,7 @@ git reset  052e            # 回退到指定版本
 1. git rebase -i [startPonit] [endPoint]
    前开后闭 区间 这里的 [startPonit] 是指需要合并的commit的前一个commit
    举例：git rebase -i b3f8169
-2. git rebase -i HEAD~2
+2. git rebase -i HEAD~2  # HEAD~2 表示最近的两个提交
 3. git rebase --continue
 4. git rebase --abort
    终止rebase
