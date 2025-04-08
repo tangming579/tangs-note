@@ -234,6 +234,13 @@ alias ls  --- 列出单个已定义的别名
 alias ls='ls --color=auto'  --- 设置别名
 ```
 
+将别名永久生效
+
+```bash
+echo "alias ll='ls -l'" >> ~/.bashrc
+source ~/.bashrc  # 重新加载配置文件
+```
+
 ##### crontab
 
 定期执行程序
