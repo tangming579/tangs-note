@@ -4,14 +4,21 @@
 
 **来吧，一起卷吧**
 
-**语言相关**
+## 开发语言
 
-- Java
-- Spring 全家桶
-- C#
-- GoLang
+### Java
 
-**各种笔记**
+- Java 总结
+
+- Spring全家桶
+
+- JVM
+
+### Golang
+
+### C#
+
+## 笔记杂项
 
 - 操作系统
 - 数据结构与算法
@@ -27,7 +34,51 @@
 - MQ
 - 设计模式
 
-**源码阅读**
+## Kubernetes
+
+### 概念
+
+-  基础概念
+
+- 安全
+
+- containerd
+
+- 证书
+
+### 组件
+
+- kube-proxy
+
+- etcd
+
+- CoreDNS
+
+- CNI
+
+- CSI
+
+- kubelet
+
+- cert-manager
+
+### 实践篇
+
+#### Operator 开发
+
+- Operator 开发基础
+- CRD 生成 Java Model
+- Makefile
+- Operator运行逻辑
+- client-go
+
+#### WSL使用
+
+## Prometheus
+
+## istio
+
+## 源码阅读
 
 - skywalking-1-代码结构与基本概念
 - skywalking-2-GraphQL
