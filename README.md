@@ -4,7 +4,16 @@
 
 **来吧，一起卷吧**
 
-## 开发语言
+## 1、AI
+
+- 概念补全
+- RAG
+- Transformer框架
+- Hugging face
+- LangChain
+- LangGraph
+
+## 2、开发语言
 
 ### Java
 
@@ -16,9 +25,17 @@
 
 ### Golang
 
+- Golang 总结
+
+### Python
+
+- Python 总结
+
 ### C#
 
-## 笔记杂项
+- C# 总结
+
+## 3、笔记杂项
 
 - 操作系统
 - 数据结构与算法
@@ -34,7 +51,7 @@
 - MQ
 - 设计模式
 
-## Kubernetes
+## 4、Kubernetes
 
 ### 概念
 
@@ -72,13 +89,7 @@
 - Operator运行逻辑
 - client-go
 
-#### WSL使用
-
-## Prometheus
-
-## istio
-
-## 源码阅读
+## 5、源码阅读
 
 - skywalking-1-代码结构与基本概念
 - skywalking-2-GraphQL
