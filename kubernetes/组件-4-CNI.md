@@ -84,4 +84,13 @@ https://blog.csdn.net/lhq1363511234/article/details/138045261
     <image src="./img/cni2.png"></image>
 </div>
 
+- **Overlay 模式**的典型特征是容器独立于主机的 IP 段，这个 IP 段进行跨主机网络通信时是通过在主机之间创建隧道的方式，将整个容器网段的包全都封装成底层的物理网络中主机之间的包。该方式的好处在于它不依赖于底层网络；
+- **路由模式**中主机和容器也分属不同的网段，它与 Overlay 模式的主要区别在于它的跨主机通信是通过路由打通，无需在不同主机之间做一个隧道封包。但路由打通就需要部分依赖于底层网络，比如说要求底层网络有二层可达的一个能力；
+- **Underlay 模式**中容器和宿主机位于同一层网络，两者拥有相同的地位。容器之间网络的打通主要依靠于底层网络。因此该模式是强依赖于底层能力的。
+
+参考：
+
+- https://www.infoq.cn/article/QDuQfhrIsblOB7TExTXe
+- https://www.infoq.cn/article/6mdfWWGHzAdihiq9lDST
+
 常用 CNI 插件及工作原理
