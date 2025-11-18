@@ -2,7 +2,22 @@
 
 K8s 中有很多方便扩展的 Interface，包括 CNI, CSI, CRI 等，将这些接口抽象出来，是为了更好的提供开放、扩展、规范等能力。
 
-CNI (Container Network Interface, 容器网络接口) 是 CoreOS 提出的一种容器网络规范，目前已被 Apache Mesos、Cloud Foundry、Kubernetes、Kurma、rkt 等众多开源项目所采用
+CNI (Container Network Interface, 容器网络接口) 是 CoreOS 提出的一种容器网络规范，负责实现 Pod 网络通信，解决核心问题包括：
+
+- Pod 间跨节点通信
+- Pod 与 Service 网络互通
+- 网络策略（NetworkPolicy）实施
+
+### 使用方法
+
+1. 首先在每个结点上配置 CNI 配置文件(/etc/cni/net.d/xxnet.conf)，其中 xxnet.conf 是某一个网络配置文件的名称；
+2. 安装 CNI 配置文件中所对应的二进制插件；
+3. 在这个节点上创建 Pod 之后，Kubelet 就会根据 CNI 配置文件执行前两步所安装的 CNI 插件；
+4. 上步执行完之后，Pod 的网络就配置完成了。
+
+<div>
+    <image src="./img/cni.png"></image>
+</div>
 
 ### 通信方式
 
@@ -55,8 +70,6 @@ Kubernetes 是通过一个叫作 CNI 的接口，维护了一个单独的网桥�
 - 如果目标Pod在远程节点，则数据包通过主机的物理网卡（如eth0）发送到数据中心网络，通过交换机到达目标节点的物理网卡，然后再通过该节点上的Calico网络栈将数据包路由到目标Pod。
   
 
-
-
 参考：
 
 https://blog.csdn.net/xixihahalelehehe/article/details/119485267
@@ -65,3 +78,10 @@ https://blog.csdn.net/xixihahalelehehe/article/details/119535258
 
 https://blog.csdn.net/lhq1363511234/article/details/138045261
 
+## CNI 插件模式
+
+<div>
+    <image src="./img/cni2.png"></image>
+</div>
+
+常用 CNI 插件及工作原理
