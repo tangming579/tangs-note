@@ -2,11 +2,77 @@
 
 K8s 中有很多方便扩展的 Interface，包括 CNI, CSI, CRI 等，将这些接口抽象出来，是为了更好的提供开放、扩展、规范等能力。
 
-CNI (Container Network Interface, 容器网络接口) 是 CoreOS 提出的一种容器网络规范，负责实现 Pod 网络通信，解决核心问题包括：
+CNI (Container Network Interface, 容器网络接口) 是 CoreOS 提出的一种容器网络规范，负责实现 Pod 网络通信
 
-- Pod 间跨节点通信
-- Pod 与 Service 网络互通
-- 网络策略（NetworkPolicy）实施
+Kubernetes 本身并未提供开箱即用的网络互通功能，只提出了两点基本要求：
+
+- pods可以与任何其他node上的所有其他pod进行通信，无需NAT
+- 节点上的代理（例如系统守护进程，kubelet）可以与该节点上的所有pod通信
+
+### IPAM
+
+Kubernetes 的网络模型要求每个 Pod 拥有唯一的 IP 地址，负责管理和分配这些 IP 地址的功能由 `IPAM`（IP Address Management）来实现。而 `IPAM` 也是 `CNI` 插件的重要组成部分。
+
+一种常见的 `IPAM` 实现方式是先给每个 node 节点分配一个 CIDR（Classless Inter-Domain Routing 无类别域间路由），然后根据 node 节点的 CIDR 范围分配该节点上的 Pod IP 地址。
+
+例如，每个 node 节点设置 CIDR：
+
+```
+apiVersion: v1
+kind: Node
+metadata:
+  name: node01
+spec:
+  podCIDR: 192.168.1.0/24
+  podCIDRs:
+  - 192.168.1.0/24
+```
+
+### Linux VETH & Bridge
+
+Pod 的 IP 地址确定后，接下来的问题是如何在集群内进行通信。
+
+Linux 提供了丰富的虚拟网络接口类型来支持复杂的网络环境。`VETH`（virtual Ethernet）和 `Bridge` 就是其中的两种虚拟网络接口
+
+#### Veth pair
+
+Veth pair 是一对虚拟网络设备。它的工作原理类似于一根带有两个网卡的网线：一端发送数据，另一端接收数据。每个 veth pair 由两个虚拟网卡组成，常用于在不同的网络命名空间之间建立通信，广泛应用于容器技术如 Docker 和 Kubernetes。。
+
+<div>
+    <image src="./img/k8s-linux-veth-bridge.png"></image>
+</div>
+
+每个 Pod 有自己的 network namespace（独立的网络命名空间），通过 veth pair 与 root namespace（主机网络命名空间）打通，然后再使用 bridge（通常叫 `cni0` 或 `docker0`）将所有 veth pair 连接在一起。
+
+#### Bridge
+
+把每一个容器看做一台主机，它们都有一套独立的“网络栈”。如果想要实现两台主机之间的通信，最直接的办法，就是把它们用一根网线连接起来；而如果想要实现多台主机之间的通信，那就需要用网线，把它们连接在一台交换机上。
+
+在 Linux 中，能够起到虚拟交换机作用的网络设备，是网桥（Bridge）。它是一个工作在数据链路层（Data Link）的设备，主要功能是根据 MAC 地址学习来将数据包转发到网桥的不同端口（Port）上。
+
+Docker 项目会默认在宿主机上创建一个名叫 docker0 的网桥，凡是连接在 docker0 网桥上的容器，就可以通过它来进行通信。而容器“连接”到 docker0 网桥上，需要使用一种名叫 Veth Pair 的虚拟设备。
+
+网络插件真正要做的事情，则是通过某种方法，把不同宿主机上的特殊设备连通，从而达到容器跨主机通信的目的。
+
+Kubernetes 是通过一个叫作 CNI 的接口，维护了一个单独的网桥来代替 docker0。这个网桥的名字就叫作：CNI 网桥，它在宿主机上的设备名称默认是：cni0
+
+### Overlay
+
+如果连接 node 节点的路由设备无法路由 pod MAC/IP，需要使用 `Overlay` 网络
+
+各个 node 节点是互通的（node IP 可路由），那么将原始数据包封装一层再传输，例如 `VXLAN` 封包
+
+原始的 pod IP 地址被封装在 Inner Ethernet Frame 里作为数据包，在外层添加 node 节点的 IP 地址，由于 node 节点互通，因此数据包会被正常转发到目标 node 节点，然后再解包并根据内层的 pod IP 转发给 pod。
+
+`Overlay` 网络通过在现有网络的基础上封装额外的一层网络包，使得 Pod 可以跨节点进行通信。
+
+`Overlay` 的实现方式有很多，`VXLAN` 是比较常见的一种，除此之外还有 `IP-in-IP` 等等
+
+### BGP
+
+
+
+## CNI 插件
 
 ### 使用方法
 
